@@ -1,0 +1,80 @@
+:root {
+  --font-sans: "Yu Mincho", "Hiragino Mincho ProN", "Hiragino Mincho Pro", "Noto Serif JP", Georgia, serif;
+  --page: #fbf4ea;
+  --surface: #fffaf3;
+  --surface-alt: #f2e3d2;
+  --text: #2d2118;
+  --muted: #7b6654;
+  --border: #d9bfa5;
+  --primary: #9f4f2f;
+  --primary-strong: #7b3821;
+  --accent: #b9853a;
+  --warning: #a15c1c;
+  --success: #5f7f42;
+  --shadow: 0 22px 46px rgba(105, 70, 42, 0.16);
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 8px;
+}
+
+body {
+  background:
+    linear-gradient(180deg, rgba(159, 79, 47, 0.12), transparent 420px),
+    linear-gradient(90deg, rgba(185, 133, 58, 0.06) 1px, transparent 1px),
+    var(--page);
+  background-size: auto, 32px 32px, auto;
+}
+
+.site-header {
+  background: color-mix(in srgb, var(--surface) 92%, transparent);
+}
+
+h1,
+h2,
+h3,
+.brand {
+  font-family: var(--font-sans);
+  font-weight: 800;
+}
+
+h1 {
+  text-wrap: balance;
+}
+
+.eyebrow {
+  color: var(--primary);
+}
+
+.brand-mark,
+.card-icon,
+.flow-list span {
+  background: linear-gradient(135deg, var(--primary), var(--accent));
+}
+
+.button.primary {
+  background: var(--primary);
+  color: #ffffff;
+  box-shadow: 0 12px 24px rgba(159, 79, 47, 0.24);
+}
+
+.button.primary:hover {
+  background: var(--primary-strong);
+}
+
+.hero-panel,
+.card,
+.table-wrap,
+.price-card,
+.cta,
+.stage-card {
+  border-color: color-mix(in srgb, var(--border) 76%, var(--primary));
+}
+
+.match-bars i,
+.rank-meter span {
+  background: linear-gradient(90deg, var(--primary), var(--accent));
+}
+
+.message.mine {
+  background: var(--primary);
+}
