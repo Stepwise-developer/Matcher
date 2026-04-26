@@ -1,0 +1,189 @@
+:root {
+  --font-sans: "MS Sans Serif", "Microsoft Sans Serif", Tahoma, Arial, sans-serif;
+  --page: #008080;
+  --surface: #c0c0c0;
+  --surface-alt: #d9d9d9;
+  --text: #000000;
+  --muted: #202020;
+  --border: #808080;
+  --primary: #000080;
+  --primary-strong: #00005f;
+  --accent: #ffff00;
+  --warning: #800000;
+  --success: #008000;
+  --shadow: 4px 4px 0 rgba(0, 0, 0, 0.45);
+  --radius-sm: 0;
+  --radius-md: 0;
+  --radius-lg: 0;
+}
+
+body {
+  background:
+    linear-gradient(45deg, rgba(255, 255, 255, 0.06) 25%, transparent 25%),
+    linear-gradient(-45deg, rgba(255, 255, 255, 0.06) 25%, transparent 25%),
+    var(--page);
+  background-size: 6px 6px;
+  font-size: 15px;
+}
+
+.site-header {
+  border-color: #ffffff #404040 #404040 #ffffff;
+  border-style: solid;
+  border-width: 2px;
+  background: var(--surface);
+  backdrop-filter: none;
+}
+
+.brand {
+  gap: 8px;
+}
+
+.brand-mark,
+.card-icon {
+  border: 2px solid;
+  border-color: #ffffff #404040 #404040 #ffffff;
+  background: var(--primary);
+  color: #ffffff;
+}
+
+.nav a,
+.nav-link,
+.button,
+.theme-picker,
+.mini-form input,
+.mini-form select,
+.tag-list span,
+.badge {
+  border: 2px solid;
+  border-color: #ffffff #404040 #404040 #ffffff;
+  background: var(--surface);
+  color: var(--text);
+  box-shadow: none;
+}
+
+.nav a:hover,
+.nav-link:hover,
+.button.secondary:hover {
+  background: var(--surface-alt);
+}
+
+.theme-picker select {
+  color: var(--text);
+}
+
+.button.primary {
+  border-color: #ffffff #000000 #000000 #ffffff;
+  background: var(--primary);
+  color: #ffffff;
+  box-shadow: none;
+}
+
+.button.primary:hover {
+  background: var(--primary-strong);
+}
+
+.hero-panel,
+.card,
+.table-wrap,
+.price-card,
+.cta {
+  border: 2px solid;
+  border-color: #ffffff #404040 #404040 #ffffff;
+  background: var(--surface);
+  box-shadow: var(--shadow);
+}
+
+.hero-panel::before,
+.card::before,
+.table-wrap::before,
+.price-card::before,
+.cta::before {
+  display: block;
+  margin: -24px -24px 18px;
+  padding: 5px 8px;
+  background: var(--primary);
+  color: #ffffff;
+  font-size: 0.82rem;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.hero-panel::before {
+  content: "dashboard.exe";
+  margin: -18px -18px 16px;
+}
+
+.card::before {
+  content: "component.win";
+}
+
+.table-wrap::before {
+  content: "listview.dat";
+  margin: 0;
+}
+
+.price-card::before {
+  content: "plan.ini";
+}
+
+.cta::before {
+  content: "next-step.txt";
+}
+
+.panel-top span {
+  width: 12px;
+  height: 12px;
+  border: 1px solid #404040;
+  background: var(--surface);
+}
+
+.metric-row article,
+.chart {
+  border: 2px inset #808080;
+  background: #ffffff;
+}
+
+.chart i {
+  border: 1px solid #000000;
+  border-bottom: 0;
+  background: repeating-linear-gradient(
+    45deg,
+    var(--primary),
+    var(--primary) 6px,
+    #0000ff 6px,
+    #0000ff 12px
+  );
+}
+
+.eyebrow {
+  color: var(--primary);
+}
+
+h1,
+h2,
+h3,
+.brand,
+.button,
+th {
+  font-weight: 800;
+}
+
+.price-card.featured {
+  transform: translateY(-10px);
+  border-color: var(--accent) #404040 #404040 var(--accent);
+}
+
+.badge.success {
+  background: #c0ffc0;
+  color: #004000;
+}
+
+.badge.warning {
+  background: #ffffc0;
+  color: #5f3b00;
+}
+
+.badge.neutral {
+  background: var(--surface-alt);
+  color: var(--text);
+}

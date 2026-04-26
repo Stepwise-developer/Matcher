@@ -1,0 +1,235 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>カレカノを作ろうの会 | AI Matching Service</title>
+    <link rel="stylesheet" href="./css/base.css" />
+    <link rel="stylesheet" href="./css/app-flow.css" />
+    <link rel="stylesheet" href="./css/theme-warm-mincho.css" data-theme-link />
+    <script src="./js/theme.js" defer></script>
+    <script src="./js/app.js" defer></script>
+  </head>
+  <body>
+    <header class="site-header">
+      <a class="brand" href="#top" data-go="top" aria-label="カレカノを作ろうの会 ホーム">
+        <span class="brand-mark">S</span>
+        <span>カレカノを作ろうの会</span>
+      </a>
+      <nav class="nav" aria-label="画面遷移">
+        <button class="nav-link active" type="button" data-go="top">Top</button>
+        <button class="nav-link" type="button" data-go="register">登録</button>
+        <button class="nav-link" type="button" data-go="leveling">LU</button>
+        <button class="nav-link" type="button" data-go="values">価値観</button>
+        <button class="nav-link" type="button" data-go="main">マッチング</button>
+      </nav>
+      <label class="theme-picker" aria-label="テーマ選択">
+        <span>Theme</span>
+        <select data-theme-select>
+          <option value="theme-warm-mincho.css">Warm Mincho</option>
+          <option value="theme-modern.css">Modern</option>
+          <option value="theme-soft.css">Soft</option>
+          <option value="theme-contrast.css">Contrast</option>
+          <option value="theme-classic.css">Classic</option>
+          <option value="theme-editorial.css">Editorial</option>
+          <option value="theme-neon.css">Neon</option>
+          <option value="theme-corporate.css">Corporate</option>
+          <option value="theme-craft.css">Craft</option>
+          <option value="theme-mono.css">Mono</option>
+          <option value="theme-retro95.css">Retro 95</option>
+        </select>
+      </label>
+    </header>
+
+    <main class="splash-flow">
+      <section class="screen active" data-screen="top" aria-labelledby="top-title">
+        <div class="hero app-hero">
+          <div class="hero-copy">
+            <p class="eyebrow">AI Matching Service</p>
+            <h1 id="top-title">カレカノを作ろうの会</h1>
+            <p class="lead">
+              AIが情報量と価値観を読み取り、準備が整った人からStage0のマッチングへ進むサービスです。
+            </p>
+            <div class="actions">
+              <button class="button primary" type="button" data-go="register">登録を始める</button>
+            </div>
+          </div>
+          <aside class="hero-panel match-preview" aria-label="初期登録フロー">
+            <div class="panel-top"><span></span><span></span><span></span></div>
+            <ol class="flow-list">
+              <li><span>01</span>基本情報を登録</li>
+              <li><span>02</span>LU項目を確認</li>
+              <li><span>03</span>価値観を自由記述</li>
+              <li><span>04</span>Stage0でマッチング開始</li>
+            </ol>
+          </aside>
+        </div>
+      </section>
+
+      <section class="screen" data-screen="register" aria-labelledby="register-title">
+        <div class="section form-page">
+          <div class="section-heading">
+            <p class="eyebrow">Registration</p>
+            <h1 id="register-title">はじめに基本情報を登録</h1>
+          </div>
+          <form class="card profile-form" data-registration-form>
+            <label>
+              生年月日
+              <input name="birthdate" type="date" value="1996-04-12" required />
+            </label>
+            <label>
+              ニックネーム
+              <input name="nickname" type="text" value="はる" placeholder="例: はる" required />
+            </label>
+            <label>
+              性別
+              <select name="gender" required>
+                <option value="">選択してください</option>
+                <option selected>女性</option>
+                <option>男性</option>
+                <option>その他</option>
+                <option>回答しない</option>
+              </select>
+            </label>
+            <label>
+              地域
+              <input name="region" type="text" value="東京都" placeholder="例: 東京都" required />
+            </label>
+            <div class="form-grid two">
+              <label>
+                身長
+                <input name="height" type="number" min="100" max="230" value="162" placeholder="cm" required />
+              </label>
+              <label>
+                体重
+                <input name="weight" type="number" min="30" max="200" value="52" placeholder="kg" required />
+              </label>
+            </div>
+            <div class="actions form-actions">
+              <button class="button secondary" type="button" data-go="top">戻る</button>
+              <button class="button primary" type="submit">LU項目へ進む</button>
+            </div>
+          </form>
+        </div>
+      </section>
+
+      <section class="screen" data-screen="leveling" aria-labelledby="leveling-title">
+        <div class="section form-page">
+          <div class="section-heading">
+            <p class="eyebrow">Leveling Unit</p>
+            <h1 id="leveling-title">初期レベリング項目</h1>
+            <p>今回は初期登録用として、足切り確認のうち3問だけ表示します。</p>
+          </div>
+          <form class="card profile-form" data-leveling-form>
+            <fieldset class="choice-field">
+              <legend>爪を定期的に切っていますか（2週間に1回以上）</legend>
+              <label><input type="radio" name="nails" value="はい" required checked />はい</label>
+              <label><input type="radio" name="nails" value="いいえ" />いいえ</label>
+            </fieldset>
+            <fieldset class="choice-field">
+              <legend>毎日洗濯した服を着ていますか</legend>
+              <label><input type="radio" name="cleanClothes" value="はい" required checked />はい</label>
+              <label><input type="radio" name="cleanClothes" value="いいえ" />いいえ</label>
+            </fieldset>
+            <fieldset class="choice-field">
+              <legend>毎日歯を磨いていますか</legend>
+              <label><input type="radio" name="teeth" value="はい" required checked />はい</label>
+              <label><input type="radio" name="teeth" value="いいえ" />いいえ</label>
+            </fieldset>
+            <div class="actions form-actions">
+              <button class="button secondary" type="button" data-go="register">戻る</button>
+              <button class="button primary" type="submit">価値観の質問へ</button>
+            </div>
+          </form>
+        </div>
+      </section>
+
+      <section class="screen" data-screen="values" aria-labelledby="values-title">
+        <div class="section form-page">
+          <div class="section-heading">
+            <p class="eyebrow">Values</p>
+            <h1 id="values-title">価値観についての質問</h1>
+            <p>自由記述の回答は、Stage0以降のマッチング文脈に使う想定です。</p>
+          </div>
+          <form class="card profile-form" data-values-form>
+            <label>
+              どんな関係性を大切にしたいですか
+              <textarea name="relationshipValue" rows="5" placeholder="例: 無理なく話せて、お互いの生活を尊重できる関係" required>無理なく話せて、お互いの生活を尊重できる関係を大切にしたいです。</textarea>
+            </label>
+            <label>
+              初対面の相手に知っておいてほしいこと
+              <textarea name="firstMessage" rows="5" placeholder="例: 最初はゆっくり会話できると安心します" required>最初はゆっくり会話できると安心します。休日の過ごし方や好きな食べ物から話せると嬉しいです。</textarea>
+            </label>
+            <div class="actions form-actions">
+              <button class="button secondary" type="button" data-go="leveling">戻る</button>
+              <button class="button primary" type="submit">Stage0へ進む</button>
+            </div>
+          </form>
+        </div>
+      </section>
+
+      <section class="screen" data-screen="stage0" aria-labelledby="stage-title">
+        <div class="section page-panel stage-panel">
+          <p class="eyebrow">Stage Up</p>
+          <h1 id="stage-title">Stage0に到達しました</h1>
+          <p class="lead">
+            LU項目と価値観質問の両方が完了しました。ここからAIが相手候補を選び、マッチングした人とのチャットが始まります。
+          </p>
+          <div class="stage-card">
+            <span>Current Stage</span>
+            <strong>Stage0</strong>
+            <p>初期登録完了・マッチング開始</p>
+          </div>
+          <div class="actions">
+            <button class="button secondary" type="button" data-go="values">回答を見直す</button>
+            <button class="button primary" type="button" data-go="main">マッチング画面へ</button>
+          </div>
+        </div>
+      </section>
+
+      <section class="screen" data-screen="main" aria-labelledby="main-title">
+        <div class="section dashboard-page">
+          <div class="section-heading">
+            <p class="eyebrow">Matching</p>
+            <h1 id="main-title"><span data-user-name>ゲスト</span>さんのStage0</h1>
+          </div>
+          <div class="dashboard-layout">
+            <aside class="card rank-panel">
+              <p class="eyebrow">User Level</p>
+              <strong>Stage0</strong>
+              <p>初期登録を完了し、マッチングした人と会話を始められる状態です。</p>
+              <div class="rank-meter" aria-label="登録進捗"><span style="width: 100%"></span></div>
+              <dl>
+                <div><dt>基本情報</dt><dd>完了</dd></div>
+                <div><dt>LU項目</dt><dd>3問</dd></div>
+                <div><dt>価値観</dt><dd>完了</dd></div>
+              </dl>
+            </aside>
+            <section class="card chat-panel" aria-label="チャット画面">
+              <div class="chat-header">
+                <div>
+                  <p class="eyebrow">Matched Chat</p>
+                  <h2>マッチング相手とのチャット</h2>
+                </div>
+                <span class="badge success">Stage0開始</span>
+              </div>
+              <div class="chat-log">
+                <p class="message theirs">はじめまして。プロフィールを見て、落ち着いて話せそうだなと思いました。</p>
+                <p class="message mine">自分に合う人と、無理なく話してみたいです。</p>
+                <p class="message theirs">私も同じです。まずは休日の過ごし方からゆっくり話せたら嬉しいです。</p>
+              </div>
+              <form class="chat-input">
+                <input type="text" value="休日はどんな過ごし方が好きですか？" aria-label="チャット入力" />
+                <button class="button primary" type="button">送信</button>
+              </form>
+              <div class="actions form-actions">
+                <button class="button secondary" type="button" data-go="register">登録を修正する</button>
+                <button class="button secondary" type="button" data-go="top">Topへ戻る</button>
+              </div>
+            </section>
+          </div>
+        </div>
+      </section>
+    </main>
+  </body>
+</html>

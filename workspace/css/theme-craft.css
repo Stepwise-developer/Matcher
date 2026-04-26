@@ -1,0 +1,48 @@
+:root {
+  --page: #fbf7ef;
+  --surface: #fffaf0;
+  --surface-alt: #f1e2c8;
+  --text: #2a2520;
+  --muted: #786a5d;
+  --border: #dcc7a5;
+  --primary: #6f8f3f;
+  --primary-strong: #55702f;
+  --accent: #c45a32;
+  --warning: #b7791f;
+  --success: #578b45;
+  --shadow: 0 18px 42px rgba(103, 76, 41, 0.14);
+  --radius-sm: 8px;
+  --radius-md: 8px;
+  --radius-lg: 8px;
+}
+
+body {
+  background:
+    linear-gradient(90deg, rgba(111, 143, 63, 0.06) 1px, transparent 1px),
+    linear-gradient(180deg, rgba(196, 90, 50, 0.05) 1px, transparent 1px),
+    var(--page);
+  background-size: 28px 28px;
+}
+
+.hero-panel,
+.card,
+.table-wrap,
+.price-card,
+.cta {
+  border-width: 2px;
+}
+
+.brand-mark,
+.card-icon {
+  background: var(--accent);
+}
+
+.chart {
+  background: repeating-linear-gradient(
+    -45deg,
+    var(--surface-alt),
+    var(--surface-alt) 10px,
+    color-mix(in srgb, var(--surface-alt) 70%, var(--surface)) 10px,
+    color-mix(in srgb, var(--surface-alt) 70%, var(--surface)) 20px
+  );
+}

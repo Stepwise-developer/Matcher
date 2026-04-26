@@ -1,0 +1,33 @@
+:root {
+  --page: #f6f8fc;
+  --surface: #ffffff;
+  --surface-alt: #edf3ff;
+  --text: #132033;
+  --muted: #64758d;
+  --border: #d9e4f0;
+  --primary: #2563eb;
+  --primary-strong: #1d4ed8;
+  --accent: #14b8a6;
+  --warning: #f59e0b;
+  --success: #16a34a;
+  --shadow: 0 22px 55px rgba(30, 41, 59, 0.13);
+  --radius-sm: 8px;
+  --radius-md: 8px;
+  --radius-lg: 8px;
+}
+
+body {
+  background:
+    radial-gradient(circle at top left, rgba(37, 99, 235, 0.13), transparent 32rem),
+    radial-gradient(circle at 90% 18%, rgba(20, 184, 166, 0.13), transparent 30rem),
+    var(--page);
+}
+
+.hero-panel {
+  rotate: -1deg;
+}
+
+.card-icon,
+.brand-mark {
+  background: linear-gradient(135deg, var(--primary), var(--accent));
+}

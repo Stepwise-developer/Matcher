@@ -1,0 +1,43 @@
+:root {
+  color-scheme: dark;
+  --page: #080b12;
+  --surface: #111827;
+  --surface-alt: #1f2937;
+  --text: #f8fafc;
+  --muted: #a8b3c4;
+  --border: #334155;
+  --primary: #facc15;
+  --primary-strong: #eab308;
+  --accent: #38bdf8;
+  --warning: #fb923c;
+  --success: #4ade80;
+  --shadow: 0 24px 60px rgba(0, 0, 0, 0.42);
+  --radius-sm: 2px;
+  --radius-md: 2px;
+  --radius-lg: 2px;
+}
+
+body {
+  background:
+    linear-gradient(135deg, rgba(250, 204, 21, 0.08), transparent 42%),
+    linear-gradient(315deg, rgba(56, 189, 248, 0.08), transparent 38%),
+    var(--page);
+}
+
+.button.primary,
+.brand-mark,
+.card-icon {
+  color: #111827;
+}
+
+.hero-panel,
+.card,
+.table-wrap,
+.price-card,
+.cta {
+  outline: 1px solid rgba(248, 250, 252, 0.08);
+}
+
+.chart i {
+  background: linear-gradient(180deg, var(--primary), var(--accent));
+}
