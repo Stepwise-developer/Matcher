@@ -11,6 +11,7 @@ yarn-error.log*
 pnpm-debug.log*
 
 # React / Node
+codex_est/
 **/node_modules/
 **/.vite/
 **/dist/
@@ -24,3 +25,5 @@ pnpm-debug.log*
 __pycache__/
 *.py[cod]
 
+# Codex
+docker-compose.codex.yml
