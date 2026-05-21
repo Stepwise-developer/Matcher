@@ -19,9 +19,33 @@ import {
   useState,
   type ReactNode,
 } from "react";
+import {
+  completeRegistration,
+  saveLegalConsent,
+  saveLevelingResults,
+  saveValueAnswers,
+  sendFeedback,
+} from "@/api/inputSubmissions";
+import {
+  clearAllInputDrafts,
+  clearFeedbackDraft,
+  clearValueAnswersDraft,
+  inputCacheDefaults,
+  readFeedbackDraft,
+  readValueAnswersDraft,
+  writeFeedbackDraft,
+  writeValueAnswersDraft,
+  type SubmitStatus,
+} from "@/cache/inputDrafts";
+import {
+  clearPendingLevelingResults,
+  mergePendingLevelingResult,
+  readPendingLevelingResults,
+} from "@/cache/pendingQueue";
 import type {
   CheckboxValueQuestion,
   ChatMessage,
+  LevelingResult,
   LevelingItem,
   RankingValueQuestion,
   RegistrationData,
@@ -39,6 +63,15 @@ type SwipeDirection = "left" | "right";
 
 const storageKey = "omatcha-registration-v3";
 
+/**
+ * フロントが表示している法務文書の版数。
+ * バックエンド側では、この版数とユーザーの同意状態を保存する想定。
+ */
+const legalDocumentVersions = {
+  privacy: "privacy-2026-05",
+  terms: "terms-2026-05",
+} as const;
+
 const emptyProfile: UserProfile = {
   name: "",
   age: "",
@@ -53,8 +86,10 @@ const ageOptions = Array.from({ length: 63 }, (_, index) =>
   String(index + 18),
 );
 
+/** プロフィール登録で使う選択肢。バックエンド側のプロフィールマスタと揃える候補。 */
 const genderOptions = ["女性", "男性", "その他", "回答しない"];
 
+/** 現在UIで選択可能な都道府県。将来的にはエリアマスタAPIから取得する候補。 */
 const kantoPrefectures = [
   "東京都",
   "神奈川県",
@@ -65,6 +100,7 @@ const kantoPrefectures = [
   "群馬県",
 ];
 
+/** 現在UIで選択可能な沿線。将来的には路線マスタAPIから取得する候補。 */
 const metropolitanTrainLines = [
   "東西線",
   "埼京線",
@@ -86,6 +122,10 @@ const metropolitanTrainLines = [
 
 const emptyValues: ValueAnswers = {};
 
+/**
+ * 初回登録前に表示する法務文書。
+ * 現状はフロント内に仮置きしているが、将来的には文書管理APIから取得する候補。
+ */
 const legalDocuments = {
   privacy: {
     title: "プライバシーポリシー",
@@ -131,6 +171,10 @@ Omatcha は、サービスの検証と改善のために、表示名、年齢、
   },
 } as const;
 
+/**
+ * レベリング項目のダミーマスタ。
+ * ユーザーごとの達成状態は RegistrationData.blockedLevelingIds / LevelingResult で管理する想定。
+ */
 const levelingItems: LevelingItem[] = [
   {
     id: "profile",
@@ -152,6 +196,10 @@ const levelingItems: LevelingItem[] = [
   },
 ];
 
+/**
+ * 価値観質問のダミーマスタ。
+ * バックエンド統合時は、質問ID、質問方式、選択肢、制約値をDBまたは管理APIで管理する想定。
+ */
 const valueQuestions: ValueQuestion[] = [
   {
     id: "weekend",
@@ -245,17 +293,30 @@ export default function Home() {
   });
   const [values, setValues] = useState<ValueAnswers>(emptyValues);
   const [valueQuestionIndex, setValueQuestionIndex] = useState(0);
+  const [legalSubmitStatus, setLegalSubmitStatus] =
+    useState<SubmitStatus>("idle");
+  const [profileSubmitStatus, setProfileSubmitStatus] =
+    useState<SubmitStatus>("idle");
+  const [levelingSubmitStatus, setLevelingSubmitStatus] =
+    useState<SubmitStatus>("idle");
+  const [pendingLevelingCount, setPendingLevelingCount] = useState(0);
+  const [valuesSubmitStatus, setValuesSubmitStatus] =
+    useState<SubmitStatus>("idle");
 
   useEffect(() => {
     const saved = window.localStorage.getItem(storageKey);
+    const valueDraft = readValueAnswersDraft();
 
     if (saved) {
       const parsed = JSON.parse(saved) as RegistrationData;
       setRegistration(parsed);
       setProfile(parsed.profile);
-      setValues(parsed.values);
+      setValues(parsed.valuesCompleted ? parsed.values : valueDraft ?? parsed.values);
+    } else if (valueDraft) {
+      setValues(valueDraft);
     }
 
+    setPendingLevelingCount(readPendingLevelingResults().length);
     setMounted(true);
   }, []);
 
@@ -278,7 +339,39 @@ export default function Home() {
     );
   }, [profile]);
 
-  function completeProfileRegistration() {
+  async function submitLegalConsent() {
+    if (!legalState.privacyAgreed || !legalState.termsAgreed) {
+      return;
+    }
+
+    setLegalSubmitStatus("saving");
+
+    try {
+      await saveLegalConsent({
+        consent: {
+          privacyPolicyAgreed: legalState.privacyAgreed,
+          privacyPolicyVersion: legalDocumentVersions.privacy,
+          termsAgreed: legalState.termsAgreed,
+          termsVersion: legalDocumentVersions.terms,
+        },
+      });
+      setLegalSubmitStatus("saved");
+      setStep("profile");
+    } catch {
+      setLegalSubmitStatus("error");
+    }
+  }
+
+  async function completeProfileRegistration() {
+    setProfileSubmitStatus("saving");
+
+    try {
+      await completeRegistration({ profile });
+    } catch {
+      setProfileSubmitStatus("error");
+      return;
+    }
+
     const nextRegistration = {
       profile,
       values: emptyValues,
@@ -290,12 +383,23 @@ export default function Home() {
     window.localStorage.setItem(storageKey, JSON.stringify(nextRegistration));
     setRegistration(nextRegistration);
     setValues(emptyValues);
+    setProfileSubmitStatus("saved");
     setActiveTab("home");
     setValueQuestionIndex(0);
   }
 
-  function completeValues(nextValues: ValueAnswers) {
+  async function completeValues(nextValues: ValueAnswers) {
     if (!registration) {
+      return;
+    }
+
+    setValuesSubmitStatus("saving");
+
+    try {
+      await saveValueAnswers({ answers: nextValues });
+    } catch {
+      writeValueAnswersDraft(nextValues);
+      setValuesSubmitStatus("error");
       return;
     }
 
@@ -308,13 +412,54 @@ export default function Home() {
     window.localStorage.setItem(storageKey, JSON.stringify(nextRegistration));
     setRegistration(nextRegistration);
     setValues(nextValues);
+    clearValueAnswersDraft();
+    setValuesSubmitStatus("saved");
     setValueQuestionIndex(0);
     setActiveTab("home");
+  }
+
+  async function saveValuesProgress(nextValues: ValueAnswers) {
+    setValuesSubmitStatus("saving");
+
+    try {
+      await saveValueAnswers({ answers: nextValues });
+      setValuesSubmitStatus("saved");
+    } catch {
+      writeValueAnswersDraft(nextValues);
+      setValuesSubmitStatus("error");
+    }
+  }
+
+  function handleValueChange(nextValues: ValueAnswers) {
+    setValues(nextValues);
+    setValuesSubmitStatus("dirty");
+    writeValueAnswersDraft(nextValues);
   }
 
   function updateRegistration(nextRegistration: RegistrationData) {
     window.localStorage.setItem(storageKey, JSON.stringify(nextRegistration));
     setRegistration(nextRegistration);
+  }
+
+  async function flushPendingLevelingResults(results?: LevelingResult[]) {
+    const queuedResults = results ?? readPendingLevelingResults();
+
+    if (queuedResults.length === 0) {
+      setPendingLevelingCount(0);
+      return;
+    }
+
+    setLevelingSubmitStatus("saving");
+
+    try {
+      await saveLevelingResults(queuedResults);
+      clearPendingLevelingResults(queuedResults.map((result) => result.itemId));
+      setPendingLevelingCount(readPendingLevelingResults().length);
+      setLevelingSubmitStatus("saved");
+    } catch {
+      setPendingLevelingCount(readPendingLevelingResults().length);
+      setLevelingSubmitStatus("error");
+    }
   }
 
   function resolveBlockedLevelingItem(itemId: string) {
@@ -325,12 +470,28 @@ export default function Home() {
     const blockedLevelingIds = registration.blockedLevelingIds.filter(
       (id) => id !== itemId,
     );
+    const queuedResults = mergePendingLevelingResult({
+      achieved: true,
+      answeredAt: new Date().toISOString(),
+      itemId,
+    });
 
     updateRegistration({ ...registration, blockedLevelingIds });
+    setPendingLevelingCount(queuedResults.length);
+    setLevelingSubmitStatus("dirty");
+
+    if (
+      queuedResults.length >= inputCacheDefaults.levelingFlushItemCount ||
+      blockedLevelingIds.length === 0
+    ) {
+      void flushPendingLevelingResults(queuedResults);
+    }
   }
 
   function resetRegistration() {
     window.localStorage.removeItem(storageKey);
+    clearAllInputDrafts();
+    clearPendingLevelingResults();
     setRegistration(null);
     setStep("consent");
     setProfile(emptyProfile);
@@ -343,6 +504,11 @@ export default function Home() {
     });
     setValues(emptyValues);
     setActiveTab("home");
+    setLegalSubmitStatus("idle");
+    setProfileSubmitStatus("idle");
+    setLevelingSubmitStatus("idle");
+    setPendingLevelingCount(0);
+    setValuesSubmitStatus("idle");
   }
 
   if (!mounted) {
@@ -363,12 +529,13 @@ export default function Home() {
             profile={profile}
             profileAttempted={profileAttempted}
             profileComplete={profileComplete}
+            submitStatus={profileSubmitStatus}
             onChange={setProfile}
             onNext={() => {
               setProfileAttempted(true);
 
               if (profileComplete) {
-                completeProfileRegistration();
+                void completeProfileRegistration();
               }
             }}
           />
@@ -376,8 +543,9 @@ export default function Home() {
         {step === "consent" ? (
           <LegalConsentStep
             legalState={legalState}
+            submitStatus={legalSubmitStatus}
             onAgreeChange={setLegalState}
-            onNext={() => setStep("profile")}
+            onNext={() => void submitLegalConsent()}
           />
         ) : null}
       </OnboardingShell>
@@ -408,16 +576,21 @@ export default function Home() {
         {activeTab === "leveling" ? (
           <LevelingHome
             onResolveItem={resolveBlockedLevelingItem}
+            onRetrySave={() => void flushPendingLevelingResults()}
+            pendingCount={pendingLevelingCount}
             registration={registration}
+            submitStatus={levelingSubmitStatus}
           />
         ) : null}
         {activeTab === "values" ? (
           <ValuesHome
-            onChange={setValues}
+            onChange={handleValueChange}
             onComplete={completeValues}
             onQuestionIndexChange={setValueQuestionIndex}
+            onSaveProgress={saveValuesProgress}
             questionIndex={valueQuestionIndex}
             registration={registration}
+            submitStatus={valuesSubmitStatus}
             values={values}
           />
         ) : null}
@@ -483,12 +656,14 @@ function ProfileStep({
   profile,
   profileAttempted,
   profileComplete,
+  submitStatus,
 }: {
   onChange: (profile: UserProfile) => void;
   onNext: () => void;
   profile: UserProfile;
   profileAttempted: boolean;
   profileComplete: boolean;
+  submitStatus: SubmitStatus;
 }) {
   function updateField(field: keyof UserProfile, value: string) {
     onChange({ ...profile, [field]: value });
@@ -571,13 +746,24 @@ function ProfileStep({
           value={profile.trainLine}
         />
       </div>
+      <SubmitStatusMessage
+        errorMessage="登録情報を保存できませんでした。内容を残したまま再送できます。"
+        savingMessage="登録情報を保存しています。"
+        status={submitStatus}
+        successMessage="登録情報を保存しました。"
+      />
       <ActionRow>
         <button
           className="min-h-12 bg-primary px-5 font-black text-white disabled:bg-surface-alt disabled:text-muted"
+          disabled={submitStatus === "saving"}
           onClick={onNext}
           type="button"
         >
-          {profileComplete ? "次へ" : "入力内容を確認"}
+          {submitStatus === "saving"
+            ? "保存中"
+            : profileComplete
+              ? "次へ"
+              : "入力内容を確認"}
         </button>
       </ActionRow>
     </section>
@@ -588,6 +774,7 @@ function LegalConsentStep({
   legalState,
   onAgreeChange,
   onNext,
+  submitStatus,
 }: {
   legalState: {
     privacyAgreed: boolean;
@@ -602,6 +789,7 @@ function LegalConsentStep({
     termsViewed: boolean;
   }) => void;
   onNext: () => void;
+  submitStatus: SubmitStatus;
 }) {
   const [activeDocument, setActiveDocument] = useState<
     keyof typeof legalDocuments | null
@@ -650,13 +838,19 @@ function LegalConsentStep({
       <ActionRow>
         <button
           className="min-h-12 bg-primary px-5 font-black text-white disabled:bg-surface-alt disabled:text-muted"
-          disabled={!canContinue}
+          disabled={!canContinue || submitStatus === "saving"}
           onClick={onNext}
           type="button"
         >
-          登録画面へ
+          {submitStatus === "saving" ? "保存中" : "登録画面へ"}
         </button>
       </ActionRow>
+      <SubmitStatusMessage
+        errorMessage="同意状態を保存できませんでした。再度お試しください。"
+        savingMessage="同意状態を保存しています。"
+        status={submitStatus}
+        successMessage="同意状態を保存しました。"
+      />
       {activeDocument ? (
         <LegalDocumentModal
           body={legalDocuments[activeDocument].body}
@@ -899,14 +1093,18 @@ function ValuesStep({
   onChange,
   onComplete,
   onQuestionIndexChange,
+  onSaveProgress,
   questionIndex,
+  submitStatus,
   values,
 }: {
   onBack?: () => void;
   onChange: (values: ValueAnswers) => void;
-  onComplete: (values: ValueAnswers) => void;
+  onComplete: (values: ValueAnswers) => void | Promise<void>;
   onQuestionIndexChange: (index: number) => void;
+  onSaveProgress: (values: ValueAnswers) => void | Promise<void>;
   questionIndex: number;
+  submitStatus: SubmitStatus;
   values: ValueAnswers;
 }) {
   const question = valueQuestions[questionIndex];
@@ -936,6 +1134,13 @@ function ValuesStep({
       return;
     }
 
+    if (
+      Object.keys(nextValues).length % inputCacheDefaults.valuesFlushQuestionCount ===
+      0
+    ) {
+      void onSaveProgress(nextValues);
+    }
+
     onQuestionIndexChange(questionIndex + 1);
   }
 
@@ -962,6 +1167,12 @@ function ValuesStep({
         questionIndex={questionIndex}
         questionTotal={valueQuestions.length}
       />
+      <SubmitStatusMessage
+        errorMessage="価値観回答を保存できませんでした。回答は下書きとして保持しています。"
+        savingMessage="価値観回答を保存しています。"
+        status={submitStatus}
+        successMessage="価値観回答を保存しました。"
+      />
       <ActionRow>
         {onBack ? (
           <button className="min-h-12 border-2 border-border px-5 font-black" onClick={onBack} type="button">
@@ -970,11 +1181,18 @@ function ValuesStep({
         ) : null}
         <button
           className="min-h-12 bg-primary px-5 font-black text-white disabled:bg-surface-alt disabled:text-muted"
-          disabled={isLastQuestion ? !canFinishValues : !canGoNext}
+          disabled={
+            submitStatus === "saving" ||
+            (isLastQuestion ? !canFinishValues : !canGoNext)
+          }
           onClick={goNext}
           type="button"
         >
-          {isLastQuestion ? "完了" : "次へ"}
+          {submitStatus === "saving"
+            ? "保存中"
+            : isLastQuestion
+              ? "完了"
+              : "次へ"}
         </button>
       </ActionRow>
     </section>
@@ -1055,10 +1273,16 @@ function HomeDashboard({ registration }: { registration: RegistrationData }) {
 
 function LevelingHome({
   onResolveItem,
+  onRetrySave,
+  pendingCount,
   registration,
+  submitStatus,
 }: {
   onResolveItem: (itemId: string) => void;
+  onRetrySave: () => void;
+  pendingCount: number;
   registration: RegistrationData;
+  submitStatus: SubmitStatus;
 }) {
   const blockedItems = levelingItems.filter((item) =>
     registration.blockedLevelingIds.includes(item.id),
@@ -1081,6 +1305,11 @@ function LevelingHome({
           />
         </div>
       </div>
+        <QueueStatusPanel
+          onRetry={onRetrySave}
+          pendingCount={pendingCount}
+          status={submitStatus}
+        />
         <SwipeLevelingDeck
           activeIndex={0}
           items={blockedItems}
@@ -1109,6 +1338,11 @@ function LevelingHome({
           />
         </div>
       </div>
+      <QueueStatusPanel
+        onRetry={onRetrySave}
+        pendingCount={pendingCount}
+        status={submitStatus}
+      />
 
       {levelingItems.map((item, index) => (
         <article
@@ -1145,15 +1379,19 @@ function ValuesHome({
   onChange,
   onComplete,
   onQuestionIndexChange,
+  onSaveProgress,
   questionIndex,
   registration,
+  submitStatus,
   values,
 }: {
   onChange: (values: ValueAnswers) => void;
-  onComplete: (values: ValueAnswers) => void;
+  onComplete: (values: ValueAnswers) => void | Promise<void>;
   onQuestionIndexChange: (index: number) => void;
+  onSaveProgress: (values: ValueAnswers) => void | Promise<void>;
   questionIndex: number;
   registration: RegistrationData;
+  submitStatus: SubmitStatus;
   values: ValueAnswers;
 }) {
   if (registration.valuesCompleted) {
@@ -1176,7 +1414,9 @@ function ValuesHome({
         onChange={onChange}
         onComplete={onComplete}
         onQuestionIndexChange={onQuestionIndexChange}
+        onSaveProgress={onSaveProgress}
         questionIndex={questionIndex}
+        submitStatus={submitStatus}
         values={values}
       />
     </div>
@@ -1744,16 +1984,35 @@ function SettingsHome({
   onReset: () => void;
   registration: RegistrationData;
 }) {
-  const [feedback, setFeedback] = useState("");
+  const [feedback, setFeedback] = useState(
+    () => readFeedbackDraft()?.message ?? "",
+  );
   const [feedbackSent, setFeedbackSent] = useState(false);
+  const [feedbackSubmitStatus, setFeedbackSubmitStatus] =
+    useState<SubmitStatus>("idle");
 
-  function sendFeedback() {
+  async function submitFeedback() {
     if (!feedback.trim()) {
       return;
     }
 
+    setFeedbackSubmitStatus("saving");
+
+    try {
+      await sendFeedback({
+        message: feedback.trim(),
+        screen: "settings",
+        sentAt: new Date().toISOString(),
+      });
+    } catch {
+      setFeedbackSubmitStatus("error");
+      return;
+    }
+
     setFeedback("");
+    clearFeedbackDraft();
     setFeedbackSent(true);
+    setFeedbackSubmitStatus("saved");
   }
 
   return (
@@ -1784,18 +2043,26 @@ function SettingsHome({
           className="mt-4 min-h-28 w-full resize-none border-2 border-border bg-surface-alt p-3 text-sm font-bold leading-6 outline-none"
           onChange={(event) => {
             setFeedback(event.target.value);
+            writeFeedbackDraft(event.target.value);
             setFeedbackSent(false);
+            setFeedbackSubmitStatus("dirty");
           }}
           placeholder="フィードバックを入力"
           value={feedback}
         />
+        <SubmitStatusMessage
+          errorMessage="送信できませんでした。入力内容は保持しています。"
+          savingMessage="フィードバックを送信しています。"
+          status={feedbackSubmitStatus}
+          successMessage="フィードバックを送信しました。"
+        />
         <button
           className="mt-3 min-h-12 bg-primary px-4 font-black text-white disabled:bg-surface-alt disabled:text-muted"
-          disabled={!feedback.trim()}
-          onClick={sendFeedback}
+          disabled={!feedback.trim() || feedbackSubmitStatus === "saving"}
+          onClick={() => void submitFeedback()}
           type="button"
         >
-          送信
+          {feedbackSubmitStatus === "saving" ? "送信中" : "送信"}
         </button>
       </div>
       <div className="border-2 border-border bg-surface p-4 shadow-mono">
@@ -2015,6 +2282,80 @@ function FieldLabel({ error, label }: { error?: string; label: string }) {
 
 function ActionRow({ children }: { children: ReactNode }) {
   return <div className="mt-6 flex justify-end gap-3">{children}</div>;
+}
+
+function SubmitStatusMessage({
+  errorMessage,
+  savingMessage,
+  status,
+  successMessage,
+}: {
+  errorMessage: string;
+  savingMessage: string;
+  status: SubmitStatus;
+  successMessage: string;
+}) {
+  if (status === "idle" || status === "dirty") {
+    return null;
+  }
+
+  const message =
+    status === "saving"
+      ? savingMessage
+      : status === "error"
+        ? errorMessage
+        : successMessage;
+
+  return (
+    <p
+      className={`mt-3 border-2 p-3 text-sm font-black ${
+        status === "error"
+          ? "border-warning bg-surface-alt text-warning"
+          : "border-primary bg-surface-alt text-text"
+      }`}
+    >
+      {message}
+    </p>
+  );
+}
+
+function QueueStatusPanel({
+  onRetry,
+  pendingCount,
+  status,
+}: {
+  onRetry: () => void;
+  pendingCount: number;
+  status: SubmitStatus;
+}) {
+  if (pendingCount === 0 && status !== "saving" && status !== "error") {
+    return null;
+  }
+
+  return (
+    <div className="border-2 border-border bg-surface-alt p-3 text-sm font-black">
+      {status === "saving" ? (
+        <p>レベリング項目をまとめて保存しています。</p>
+      ) : null}
+      {status === "error" ? (
+        <div className="flex items-center justify-between gap-3">
+          <p className="text-warning">
+            未送信の項目が{pendingCount}件あります。
+          </p>
+          <button
+            className="min-h-10 border-2 border-border bg-surface px-3"
+            onClick={onRetry}
+            type="button"
+          >
+            再送
+          </button>
+        </div>
+      ) : null}
+      {status !== "saving" && status !== "error" && pendingCount > 0 ? (
+        <p>未送信の項目が{pendingCount}件あります。まとまりごとに保存します。</p>
+      ) : null}
+    </div>
+  );
 }
 
 function InfoRow({ label, value }: { label: string; value: string }) {

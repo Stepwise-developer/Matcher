@@ -21,11 +21,15 @@ export type ApiSuccessResponse<TData> = {
 /**
  * API共通: APIレスポンスの失敗形。
  * フォームエラーや認証エラーなどを画面表示するために使う。
+ * fields はフォーム項目単位のエラー表示に使う想定。
  */
 export type ApiErrorResponse = {
   error: {
+    /** 機械判定用のエラーコード。例: validation_error, unauthorized */
     code: string;
+    /** 画面に表示できる短いエラーメッセージ。 */
     message: string;
+    /** 項目名ごとのエラー。key はフロントのフォーム項目名と揃える。 */
     fields?: Record<string, string>;
   };
 };
@@ -35,35 +39,71 @@ export type ApiErrorResponse = {
  * マッチング、設定表示、候補表示の条件として保存する。
  */
 export type UserProfile = {
+  /** 表示名。ログインIDではなく、画面表示用の名前。 */
   name: string;
+  /** 年齢。現状UIではセレクト値を文字列で保持する。 */
   age: string;
+  /** 性別。選択肢はフロントの定義とバックエンド側マスタで揃える。 */
   gender: string;
+  /** 身長cm。現状UIでは入力値を文字列で保持し、送信前に範囲チェックする。 */
   height: string;
+  /** 体重kg。現状UIでは入力値を文字列で保持し、送信前に範囲チェックする。 */
   weight: string;
+  /** 活動エリア。現在は関東圏の都道府県のみ。 */
   area: string;
+  /** 首都圏の沿線。将来的には路線マスタIDへの置き換え候補。 */
   trainLine: string;
 };
 
 /**
  * ユーザー登録状態: 初回登録完了後に保存するオンボーディング結果。
  * 現状は localStorage に保存しているが、バックエンド統合後はユーザー状態APIで管理する。
+ * 初回登録ではプロフィールだけを確定し、価値観質問とレベリングはHome表示後に進める。
  */
 export type RegistrationData = {
+  /** 登録済みプロフィール。設定画面やHome表示の基礎データ。 */
   profile: UserProfile;
+  /** 価値観質問の回答。未回答時は空オブジェクトを許容する。 */
   values: ValueAnswers;
+  /** 価値観質問が完了済みかどうか。メッセージ解放条件に使う。 */
   valuesCompleted: boolean;
+  /** 未達成のレベリング項目ID。空配列になるとレベリング完了扱い。 */
   blockedLevelingIds: ApiId[];
+  /** 初回プロフィール登録が完了した日時。ISO 8601 形式を想定。 */
   completedAt: ApiDateTime;
 };
 
 /**
- * ユーザー登録API: 初回登録を完了させる時に送信するデータ。
- * プロフィール、価値観回答、未達成レベリング項目をまとめて保存する。
+ * 規約同意: 初回登録前に確認する利用規約・プライバシーポリシーの同意状態。
+ * 画面では両方を開いてからチェック可能にし、表示中の文書版数と同意状態を送る。
+ * 信頼できる同意日時はサーバー側で記録する前提にする。
+ */
+export type LegalConsent = {
+  /** プライバシーポリシーに同意したか。 */
+  privacyPolicyAgreed: boolean;
+  /** フロントが表示したプライバシーポリシーの版数または文書ID。 */
+  privacyPolicyVersion: string;
+  /** 利用規約に同意したか。 */
+  termsAgreed: boolean;
+  /** フロントが表示した利用規約の版数または文書ID。 */
+  termsVersion: string;
+};
+
+/**
+ * 規約同意API: 初回登録の最初に同意内容を保存する時のリクエスト。
+ * プロフィール登録とは分け、同意履歴を独立して管理できるようにする。
+ */
+export type SaveLegalConsentRequest = {
+  consent: LegalConsent;
+};
+
+/**
+ * ユーザー登録API: 初回プロフィール登録を完了させる時に送信するデータ。
+ * 現在のUIでは個人情報の登録だけでHomeへ進み、価値観質問とレベリングは後続タブで進める。
  */
 export type CompleteRegistrationRequest = {
+  /** 初回登録時に確定するプロフィール。レベリングや価値観回答は含めない。 */
   profile: UserProfile;
-  values: ValueAnswers;
-  blockedLevelingIds: ApiId[];
 };
 
 /**
@@ -79,9 +119,13 @@ export type RegistrationStatusResponse = ApiSuccessResponse<{
  * title はカード見出し、body は詳細説明として表示する。
  */
 export type LevelingItem = {
+  /** レベリング項目のID。ユーザー達成状態ではこのIDを参照する。 */
   id: ApiId;
+  /** カードや一覧に表示する短い見出し。 */
   title: string;
+  /** 項目の説明本文。 */
   body: string;
+  /** 達成済みと判断するための基準。 */
   criteria: string;
 };
 
@@ -90,8 +134,11 @@ export type LevelingItem = {
  * 初回登録の左右スワイプや、未達成項目の回収で利用する。
  */
 export type LevelingResult = {
+  /** 判定対象のレベリング項目ID。 */
   itemId: ApiId;
+  /** true なら達成、false なら未達成。 */
   achieved: boolean;
+  /** フロントで判定操作を行った日時。保存時刻はサーバー側でも別途持てる。 */
   answeredAt: ApiDateTime;
 };
 
@@ -116,8 +163,11 @@ export type UpdateLevelingResultRequest = {
  * type により、並べ替え、チェックボックス、自由記述のどれで回答するかを分ける。
  */
 export type ValueQuestionBase = {
+  /** 質問ID。回答保存時の key として利用する。 */
   id: ApiId;
+  /** 質問タイトル。 */
   title: string;
+  /** 質問本文または補足説明。 */
   body: string;
 };
 
@@ -127,6 +177,7 @@ export type ValueQuestionBase = {
  */
 export type RankingValueQuestion = ValueQuestionBase & {
   type: "ranking";
+  /** 並べ替える選択肢。配列順は初期表示順。 */
   options: string[];
 };
 
@@ -136,8 +187,11 @@ export type RankingValueQuestion = ValueQuestionBase & {
  */
 export type CheckboxValueQuestion = ValueQuestionBase & {
   type: "checkbox";
+  /** チェックボックスの選択肢。質問ごとに数は可変。 */
   options: string[];
+  /** 最低選択数。未指定時はフロント側で1として扱う。 */
   minSelections?: number;
+  /** 最大選択数。未指定時は選択肢数まで選択可能として扱う。 */
   maxSelections?: number;
 };
 
@@ -147,8 +201,11 @@ export type CheckboxValueQuestion = ValueQuestionBase & {
  */
 export type TextValueQuestion = ValueQuestionBase & {
   type: "text";
+  /** 最低文字数。未指定時はフロント側で1として扱う。 */
   minLength?: number;
+  /** 最大文字数。未指定時はフロント側で既定値を使う。 */
   maxLength?: number;
+  /** 入力欄に表示する例文。 */
   placeholder?: string;
 };
 
@@ -167,6 +224,7 @@ export type ValueQuestion =
  */
 export type RankingValueAnswer = {
   type: "ranking";
+  /** 優先順位。配列の先頭ほど優先度が高い。 */
   order: string[];
 };
 
@@ -176,6 +234,7 @@ export type RankingValueAnswer = {
  */
 export type CheckboxValueAnswer = {
   type: "checkbox";
+  /** 選択済みの選択肢。 */
   selected: string[];
 };
 
@@ -185,6 +244,7 @@ export type CheckboxValueAnswer = {
  */
 export type TextValueAnswer = {
   type: "text";
+  /** 自由記述の回答本文。localStorage には保存しない方針。 */
   text: string;
 };
 
@@ -198,6 +258,7 @@ export type ValueAnswer =
   | TextValueAnswer;
 
 export type ValueAnswers = {
+  /** key は ValueQuestion.id。value は質問typeに対応する回答。 */
   [questionId: ApiId]: ValueAnswer;
 };
 
@@ -222,11 +283,17 @@ export type SaveValueAnswersRequest = {
  * 現在はダミー表示だが、ユーザーごとに変わるためAPI取得対象にする。
  */
 export type HomeDashboardData = {
+  /** 現在のユーザーレベル。 */
   level: number;
+  /** レベル名や状態名。 */
   levelTitle: string;
+  /** 進捗率。0-100の数値を想定。 */
   progressPercent: number;
+  /** Homeで表示する主な活動エリア。 */
   area: string;
+  /** 未達成レベリング項目ID。 */
   blockedLevelingIds: ApiId[];
+  /** 未回答の価値観質問ID。 */
   unansweredValueQuestionIds: ApiId[];
 };
 
@@ -241,7 +308,9 @@ export type HomeDashboardResponse = ApiSuccessResponse<HomeDashboardData>;
  * 本アプリでは同時に会話できる相手は1名だけの想定。
  */
 export type MatchPartner = {
+  /** マッチ相手ID。 */
   id: ApiId;
+  /** 画面表示名。 */
   name: string;
 };
 
@@ -256,9 +325,13 @@ export type ChatSender = "me" | "partner";
  * text は改行を含む可能性があるため、UI側では whitespace-pre-wrap で表示する。
  */
 export type ChatMessage = {
+  /** メッセージID。フロントの仮IDからDB採番IDへ置き換え可能。 */
   id: ApiId;
+  /** 自分の発言か相手の発言か。 */
   sender: ChatSender;
+  /** メッセージ本文。改行を含む可能性がある。 */
   text: string;
+  /** 表示用時刻。バックエンド統合時は送信日時と表示形式を分けてもよい。 */
   time: string;
 };
 
@@ -276,6 +349,7 @@ export type ChatThreadResponse = ApiSuccessResponse<{
  * Enterは改行のみ、送信ボタン押下時だけこのデータを送る。
  */
 export type SendMessageRequest = {
+  /** 送信するメッセージ本文。Enterでは送信せず、送信ボタン押下時だけ送る。 */
   text: string;
 };
 
@@ -293,6 +367,7 @@ export type SendMessageResponse = ApiSuccessResponse<{
  * 現状は登録プロフィールをそのまま表示するが、通知設定などを追加できるよう分けておく。
  */
 export type SettingsData = {
+  /** 設定画面で表示する登録プロフィール。 */
   profile: UserProfile;
 };
 
@@ -301,3 +376,24 @@ export type SettingsData = {
  * プロフィール編集や通知設定が増えた場合もこの型を拡張する。
  */
 export type SettingsResponse = ApiSuccessResponse<SettingsData>;
+
+/**
+ * フィードバックAPI: 設定内の意見箱から送信する内容。
+ * 任意で画面名や送信時刻を持たせ、後から改善対象を追いやすくする。
+ */
+export type FeedbackRequest = {
+  /** 意見箱の本文。送信失敗時はフロント側state/sessionStorageに保持する。 */
+  message: string;
+  /** 送信元画面。例: settings */
+  screen?: string;
+  /** フロントで送信操作を行った時刻。受付時刻はサーバー側でも記録する想定。 */
+  sentAt: ApiDateTime;
+};
+
+/**
+ * フィードバックAPI: 意見箱の送信結果。
+ * 受け付けたフィードバックIDを返し、問い合わせや管理画面で追跡できるようにする。
+ */
+export type FeedbackResponse = ApiSuccessResponse<{
+  feedbackId: ApiId;
+}>;
