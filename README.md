@@ -12,7 +12,7 @@ React、Rust、nginx を docker compose で起動する最小構成。
 
 | ディレクトリ | コンテナ | 説明 |
 | --- | --- | --- |
-| `workspace/react` | `omatcha_react` | React アプリケーション用。Vite で起動し、内部では `5173` ポートで待ち受ける。 |
+| `workspace/react` | `omatcha_react` | Next.js アプリケーション用。内部では `3000` ポートで待ち受ける。 |
 | `workspace/rust` | `omatcha_rust` | Rust API 用。`cargo run` で起動し、内部では `8080` ポートで待ち受ける。 |
 | `workspace/nginx` | `omatcha_nginx` | nginx の設定ファイルを配置する。`default.conf` を nginx コンテナへマウントする。 |
 
@@ -44,7 +44,7 @@ React アプリケーションへの入口。
 転送先:
 
 ```text
-react:5173
+react:3000
 ```
 
 ### `/matcha-api/`
