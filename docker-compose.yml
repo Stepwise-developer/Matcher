@@ -19,8 +19,10 @@ services:
       dockerfile: docker/dockerfile.react
     volumes:
       - ./workspace/react:/workspace
+      - react_node_modules:/workspace/node_modules
+      - react_next:/workspace/.next
     working_dir: /workspace
-    command: sh -c "npm install && npm run dev -- --host 0.0.0.0"
+    command: sh -c "npm install && npm run dev"
 
   rust:
     container_name: omatcha_rust
@@ -31,3 +33,7 @@ services:
       - ./workspace/rust:/workspace
     working_dir: /workspace
     command: cargo run
+
+volumes:
+  react_node_modules:
+  react_next:
