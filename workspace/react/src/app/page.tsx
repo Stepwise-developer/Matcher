@@ -87,7 +87,7 @@ const ageOptions = Array.from({ length: 63 }, (_, index) =>
 );
 
 /** プロフィール登録で使う選択肢。バックエンド側のプロフィールマスタと揃える候補。 */
-const genderOptions = ["女性", "男性", "その他", "回答しない"];
+const genderOptions = ["女性", "男性"];
 
 /** 現在UIで選択可能な都道府県。将来的にはエリアマスタAPIから取得する候補。 */
 const kantoPrefectures = [
@@ -577,7 +577,6 @@ export default function Home() {
           <LevelingHome
             onResolveItem={resolveBlockedLevelingItem}
             onRetrySave={() => void flushPendingLevelingResults()}
-            pendingCount={pendingLevelingCount}
             registration={registration}
             submitStatus={levelingSubmitStatus}
           />
@@ -1216,7 +1215,6 @@ function HomeDashboard({ registration }: { registration: RegistrationData }) {
             <Sparkles size={24} />
           </div>
           <div>
-            <p className="text-xs font-black uppercase text-muted">Home</p>
             <h1 className="text-xl font-black">Lv. 3 / 会話の種まき</h1>
           </div>
         </div>
@@ -1274,13 +1272,11 @@ function HomeDashboard({ registration }: { registration: RegistrationData }) {
 function LevelingHome({
   onResolveItem,
   onRetrySave,
-  pendingCount,
   registration,
   submitStatus,
 }: {
   onResolveItem: (itemId: string) => void;
   onRetrySave: () => void;
-  pendingCount: number;
   registration: RegistrationData;
   submitStatus: SubmitStatus;
 }) {
@@ -1294,7 +1290,6 @@ function LevelingHome({
       <div className="border-2 border-border bg-surface p-4 shadow-mono">
         <div className="flex items-start justify-between gap-4">
           <div>
-            <p className="text-xs font-black uppercase text-muted">Level lock</p>
             <h2 className="mt-1 text-xl font-black leading-tight">
               未達成の項目を完了してください
             </h2>
@@ -1307,7 +1302,6 @@ function LevelingHome({
       </div>
         <QueueStatusPanel
           onRetry={onRetrySave}
-          pendingCount={pendingCount}
           status={submitStatus}
         />
         <SwipeLevelingDeck
@@ -1329,7 +1323,6 @@ function LevelingHome({
       <div className="border-2 border-border bg-surface p-4 shadow-mono">
         <div className="flex items-start justify-between gap-4">
           <div>
-            <p className="text-xs font-black uppercase text-muted">Leveling</p>
             <h1 className="mt-1 text-xl font-black">レベリング項目の詳細</h1>
           </div>
           <InfoButton
@@ -1340,7 +1333,6 @@ function LevelingHome({
       </div>
       <QueueStatusPanel
         onRetry={onRetrySave}
-        pendingCount={pendingCount}
         status={submitStatus}
       />
 
@@ -1649,9 +1641,6 @@ function SwipeLevelingDeck({
                 </div>
               ) : null}
               <div>
-                <p className="text-xs font-black uppercase text-muted">
-                  Leveling check
-                </p>
                 <div className="mt-10 flex items-start justify-between gap-4">
                   <h3 className="text-3xl font-black leading-tight">
                     {item.title}
@@ -2066,9 +2055,9 @@ function SettingsHome({
         </button>
       </div>
       <div className="border-2 border-border bg-surface p-4 shadow-mono">
-        <h3 className="font-black">登録フロー確認用</h3>
+        <h3 className="font-black">登録情報</h3>
         <p className="mt-2 text-sm leading-6 text-muted">
-          UI検証のため、初回登録状態をリセットできます。
+          入力内容を消去して、最初の登録画面からやり直せます。
         </p>
         <button
           className="mt-4 inline-flex min-h-12 items-center gap-2 border-2 border-border px-4 font-black"
@@ -2076,7 +2065,7 @@ function SettingsHome({
           type="button"
         >
           <RotateCcw size={18} />
-          初回登録に戻す
+          初回登録に戻る
         </button>
       </div>
     </section>
@@ -2321,14 +2310,12 @@ function SubmitStatusMessage({
 
 function QueueStatusPanel({
   onRetry,
-  pendingCount,
   status,
 }: {
   onRetry: () => void;
-  pendingCount: number;
   status: SubmitStatus;
 }) {
-  if (pendingCount === 0 && status !== "saving" && status !== "error") {
+  if (status !== "saving" && status !== "error") {
     return null;
   }
 
@@ -2339,9 +2326,7 @@ function QueueStatusPanel({
       ) : null}
       {status === "error" ? (
         <div className="flex items-center justify-between gap-3">
-          <p className="text-warning">
-            未送信の項目が{pendingCount}件あります。
-          </p>
+          <p className="text-warning">保存できませんでした。</p>
           <button
             className="min-h-10 border-2 border-border bg-surface px-3"
             onClick={onRetry}
@@ -2350,9 +2335,6 @@ function QueueStatusPanel({
             再送
           </button>
         </div>
-      ) : null}
-      {status !== "saving" && status !== "error" && pendingCount > 0 ? (
-        <p>未送信の項目が{pendingCount}件あります。まとまりごとに保存します。</p>
       ) : null}
     </div>
   );
