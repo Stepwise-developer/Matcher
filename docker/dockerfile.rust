@@ -1,5 +1,3 @@
 FROM rust:1.87-slim
 
-WORKDIR /workspace
-
-CMD ["cargo", "run"]
+EXPOSE 8080
