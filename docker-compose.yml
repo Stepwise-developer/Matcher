@@ -27,7 +27,35 @@ services:
     build:
       context: .
       dockerfile: docker/dockerfile.rust
+    environment:
+      http_proxy: ${http_proxy:-}
+      https_proxy: ${https_proxy:-}
     volumes:
       - ./workspace/rust:/workspace
     working_dir: /workspace
     command: cargo run
+    depends_on:
+      - db
+
+  db:
+    container_name: omatcha_db
+    build:
+      context: .
+      dockerfile: docker/dockerfile.db
+    environment:
+      MYSQL_ROOT_PASSWORD: root_password
+      MYSQL_DATABASE: omatcha
+      MYSQL_USER: omatcha
+      MYSQL_PASSWORD: omatcha_password
+    ports:
+      - "3306:3306"
+    volumes:
+      - ./service/db/db_data:/var/lib/mysql
+      - ./workspace/db:/docker-entrypoint-initdb.d:ro
+    command:
+      - mysqld
+      - --character-set-server=utf8mb4 #文字コードをUTF-8に設定
+      - --collation-server=utf8mb4_0900_ai_ci #照合順序をUTF-8に設定
+
+volumes:
+  db_data:
