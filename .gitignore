@@ -24,3 +24,6 @@ pnpm-debug.log*
 __pycache__/
 *.py[cod]
 
+# database
+**/server/db/db_data/
+service/db/db_data/
