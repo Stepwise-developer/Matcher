@@ -21,6 +21,7 @@ import {
 } from "react";
 import {
   completeRegistration,
+  registerUserIdentity,
   saveLegalConsent,
   saveLevelingResults,
   saveValueAnswers,
@@ -56,12 +57,21 @@ import type {
   ValueQuestion,
 } from "@/types/api";
 
-type RegistrationStep = "consent" | "profile";
+type RegistrationStep = "consent" | "identity" | "profile";
 type AppTab = "leveling" | "values" | "home" | "messages" | "settings";
+type RegistrationIdentity = {
+  nickName: string;
+  birthDate: string;
+};
 
 type SwipeDirection = "left" | "right";
 
 const storageKey = "omatcha-registration-v3";
+
+const emptyIdentity: RegistrationIdentity = {
+  nickName: "",
+  birthDate: "",
+};
 
 /**
  * フロントが表示している法務文書の版数。
@@ -283,6 +293,11 @@ export default function Home() {
   );
   const [step, setStep] = useState<RegistrationStep>("consent");
   const [activeTab, setActiveTab] = useState<AppTab>("home");
+  const [identity, setIdentity] =
+    useState<RegistrationIdentity>(emptyIdentity);
+  const [identityAttempted, setIdentityAttempted] = useState(false);
+  const [identitySubmitError, setIdentitySubmitError] = useState("");
+  const [userUuid, setUserUuid] = useState("");
   const [profile, setProfile] = useState<UserProfile>(emptyProfile);
   const [profileAttempted, setProfileAttempted] = useState(false);
   const [legalState, setLegalState] = useState({
@@ -294,6 +309,8 @@ export default function Home() {
   const [values, setValues] = useState<ValueAnswers>(emptyValues);
   const [valueQuestionIndex, setValueQuestionIndex] = useState(0);
   const [legalSubmitStatus, setLegalSubmitStatus] =
+    useState<SubmitStatus>("idle");
+  const [identitySubmitStatus, setIdentitySubmitStatus] =
     useState<SubmitStatus>("idle");
   const [profileSubmitStatus, setProfileSubmitStatus] =
     useState<SubmitStatus>("idle");
@@ -308,10 +325,21 @@ export default function Home() {
     const valueDraft = readValueAnswersDraft();
 
     if (saved) {
-      const parsed = JSON.parse(saved) as RegistrationData;
-      setRegistration(parsed);
-      setProfile(parsed.profile);
-      setValues(parsed.valuesCompleted ? parsed.values : valueDraft ?? parsed.values);
+      try {
+        const parsed = JSON.parse(saved) as RegistrationData;
+        const savedValues = parsed.values ?? emptyValues;
+
+        setRegistration({ ...parsed, values: savedValues });
+        setProfile(parsed.profile ?? emptyProfile);
+        setUserUuid(parsed.userUuid ?? "");
+        setValues(parsed.valuesCompleted ? savedValues : valueDraft ?? savedValues);
+      } catch {
+        window.localStorage.removeItem(storageKey);
+
+        if (valueDraft) {
+          setValues(valueDraft);
+        }
+      }
     } else if (valueDraft) {
       setValues(valueDraft);
     }
@@ -339,6 +367,13 @@ export default function Home() {
     );
   }, [profile]);
 
+  const identityComplete = useMemo(() => {
+    return (
+      identity.nickName.trim().length > 0 &&
+      isBirthDateInputValid(identity.birthDate)
+    );
+  }, [identity]);
+
   async function submitLegalConsent() {
     if (!legalState.privacyAgreed || !legalState.termsAgreed) {
       return;
@@ -356,9 +391,42 @@ export default function Home() {
         },
       });
       setLegalSubmitStatus("saved");
-      setStep("profile");
+      setStep("identity");
     } catch {
       setLegalSubmitStatus("error");
+    }
+  }
+
+  async function submitIdentityRegistration() {
+    if (!identityComplete) {
+      return;
+    }
+
+    setIdentitySubmitStatus("saving");
+    setIdentitySubmitError("");
+
+    try {
+      const response = await registerUserIdentity({
+        register: true,
+        nickName: identity.nickName.trim(),
+        birthDate: identity.birthDate,
+      });
+
+      setUserUuid(response.data.userUuid);
+      setIdentitySubmitStatus("saved");
+      setStep("profile");
+    } catch (error) {
+      const message =
+        error instanceof Error && error.message
+          ? error.message
+          : "ユーザーUUIDを登録できませんでした。";
+
+      setIdentitySubmitError(
+        message === "Failed to fetch"
+          ? "登録情報を送信できませんでした。接続先を確認してください。"
+          : message,
+      );
+      setIdentitySubmitStatus("error");
     }
   }
 
@@ -372,7 +440,8 @@ export default function Home() {
       return;
     }
 
-    const nextRegistration = {
+    const nextRegistration: RegistrationData = {
+      userUuid,
       profile,
       values: emptyValues,
       valuesCompleted: false,
@@ -494,6 +563,10 @@ export default function Home() {
     clearPendingLevelingResults();
     setRegistration(null);
     setStep("consent");
+    setIdentity(emptyIdentity);
+    setIdentityAttempted(false);
+    setIdentitySubmitError("");
+    setUserUuid("");
     setProfile(emptyProfile);
     setProfileAttempted(false);
     setLegalState({
@@ -505,6 +578,7 @@ export default function Home() {
     setValues(emptyValues);
     setActiveTab("home");
     setLegalSubmitStatus("idle");
+    setIdentitySubmitStatus("idle");
     setProfileSubmitStatus("idle");
     setLevelingSubmitStatus("idle");
     setPendingLevelingCount(0);
@@ -524,6 +598,31 @@ export default function Home() {
   if (!registration) {
     return (
       <OnboardingShell step={step}>
+        {step === "consent" ? (
+          <LegalConsentStep
+            legalState={legalState}
+            submitStatus={legalSubmitStatus}
+            onAgreeChange={setLegalState}
+            onNext={() => void submitLegalConsent()}
+          />
+        ) : null}
+        {step === "identity" ? (
+          <IdentityStep
+            identity={identity}
+            identityAttempted={identityAttempted}
+            identityComplete={identityComplete}
+            submitError={identitySubmitError}
+            submitStatus={identitySubmitStatus}
+            onChange={setIdentity}
+            onNext={() => {
+              setIdentityAttempted(true);
+
+              if (identityComplete) {
+                void submitIdentityRegistration();
+              }
+            }}
+          />
+        ) : null}
         {step === "profile" ? (
           <ProfileStep
             profile={profile}
@@ -538,14 +637,6 @@ export default function Home() {
                 void completeProfileRegistration();
               }
             }}
-          />
-        ) : null}
-        {step === "consent" ? (
-          <LegalConsentStep
-            legalState={legalState}
-            submitStatus={legalSubmitStatus}
-            onAgreeChange={setLegalState}
-            onNext={() => void submitLegalConsent()}
           />
         ) : null}
       </OnboardingShell>
@@ -622,14 +713,15 @@ function OnboardingShell({
 }) {
   const steps = [
     { id: "consent", label: "規約同意" },
-    { id: "profile", label: "ユーザー情報" },
+    { id: "identity", label: "登録情報" },
+    { id: "profile", label: "プロフィール" },
   ] as const;
   const activeIndex = steps.findIndex((item) => item.id === step);
 
   return (
     <main className="min-h-screen px-4 py-6 font-sans text-text sm:px-6">
       <section className="mx-auto w-full max-w-[480px] border-2 border-border bg-surface p-5 shadow-mono sm:p-6">
-        <ol className="mt-5 grid grid-cols-2 gap-2">
+        <ol className="mt-5 grid grid-cols-3 gap-2">
           {steps.map((item, index) => (
             <li
               className={`border-2 px-2 py-2 text-center text-[11px] font-black ${
@@ -646,6 +738,82 @@ function OnboardingShell({
         <div className="mt-6">{children}</div>
       </section>
     </main>
+  );
+}
+
+function IdentityStep({
+  identity,
+  identityAttempted,
+  identityComplete,
+  onChange,
+  onNext,
+  submitError,
+  submitStatus,
+}: {
+  identity: RegistrationIdentity;
+  identityAttempted: boolean;
+  identityComplete: boolean;
+  onChange: (identity: RegistrationIdentity) => void;
+  onNext: () => void;
+  submitError: string;
+  submitStatus: SubmitStatus;
+}) {
+  function updateField(field: keyof RegistrationIdentity, value: string) {
+    onChange({ ...identity, [field]: value });
+  }
+
+  const errors = getIdentityErrors(identity);
+
+  return (
+    <section>
+      <StepHeader
+        body="初回登録に使うニックネームと生年月日を入力します。"
+        icon={<UserRound size={22} />}
+        title="2. 登録情報を入力"
+      />
+      <div className="mt-5 grid gap-4">
+        <TextField
+          error={identityAttempted ? errors.nickName : ""}
+          help="1文字以上"
+          label="ニックネーム"
+          onChange={(value) => updateField("nickName", value)}
+          placeholder="例: matcha_taro"
+          value={identity.nickName}
+        />
+        <TextField
+          error={identityAttempted ? errors.birthDate : ""}
+          help="YYYY-MM-DD"
+          label="生年月日"
+          onChange={(value) => updateField("birthDate", value)}
+          placeholder="2000-01-01"
+          type="date"
+          value={identity.birthDate}
+        />
+      </div>
+      <SubmitStatusMessage
+        errorMessage={
+          submitError ||
+          "登録情報を送信できませんでした。内容を確認して再送してください。"
+        }
+        savingMessage="登録情報を送信しています。"
+        status={submitStatus}
+        successMessage="登録情報を確認しました。"
+      />
+      <ActionRow>
+        <button
+          className="min-h-12 bg-primary px-5 font-black text-white disabled:bg-surface-alt disabled:text-muted"
+          disabled={submitStatus === "saving"}
+          onClick={onNext}
+          type="button"
+        >
+          {submitStatus === "saving"
+            ? "送信中"
+            : identityComplete
+              ? "次へ"
+              : "入力内容を確認"}
+        </button>
+      </ActionRow>
+    </section>
   );
 }
 
@@ -675,7 +843,7 @@ function ProfileStep({
       <StepHeader
         body="マッチングと会話の出発点になる基本情報を入力します。条件を満たすまで次へ進めません。"
         icon={<UserRound size={22} />}
-        title="1. ユーザー情報を入力"
+        title="3. プロフィールを入力"
       />
       <div className="mt-5 grid gap-4">
         <TextField
@@ -2190,6 +2358,7 @@ function TextField({
   onChange,
   placeholder,
   suffix,
+  type = "text",
   value,
 }: {
   error?: string;
@@ -2199,6 +2368,7 @@ function TextField({
   onChange: (value: string) => void;
   placeholder: string;
   suffix?: string;
+  type?: "date" | "text";
   value: string;
 }) {
   return (
@@ -2211,6 +2381,7 @@ function TextField({
           inputMode={inputMode}
           onChange={(event) => onChange(event.target.value)}
           placeholder={placeholder}
+          type={type}
           value={value}
         />
         {suffix ? (
@@ -2347,6 +2518,37 @@ function InfoRow({ label, value }: { label: string; value: string }) {
       <dd>{value}</dd>
     </div>
   );
+}
+
+function isBirthDateInputValid(value: string) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+    return false;
+  }
+
+  const date = new Date(`${value}T00:00:00Z`);
+
+  if (Number.isNaN(date.getTime())) {
+    return false;
+  }
+
+  if (date.toISOString().slice(0, 10) !== value) {
+    return false;
+  }
+
+  const today = new Date().toISOString().slice(0, 10);
+
+  return value <= today;
+}
+
+function getIdentityErrors(identity: RegistrationIdentity) {
+  return {
+    nickName: identity.nickName.trim()
+      ? ""
+      : "ニックネームを入力してください",
+    birthDate: isBirthDateInputValid(identity.birthDate)
+      ? ""
+      : "生年月日をYYYY-MM-DDで入力してください",
+  };
 }
 
 function getProfileErrors(profile: UserProfile) {

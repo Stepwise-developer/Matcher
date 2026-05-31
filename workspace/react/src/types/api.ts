@@ -61,6 +61,8 @@ export type UserProfile = {
  * 初回登録ではプロフィールだけを確定し、価値観質問とレベリングはHome表示後に進める。
  */
 export type RegistrationData = {
+  /** バックエンドで発行されたユーザーUUID。後続APIの X-User-UUID に使う。 */
+  userUuid?: ApiId;
   /** 登録済みプロフィール。設定画面やHome表示の基礎データ。 */
   profile: UserProfile;
   /** 価値観質問の回答。未回答時は空オブジェクトを許容する。 */
@@ -96,6 +98,23 @@ export type LegalConsent = {
 export type SaveLegalConsentRequest = {
   consent: LegalConsent;
 };
+
+/**
+ * ユーザーUUID登録・参照API: ニックネームと生年月日を使ってUUIDを扱う。
+ * register が true の場合は新規登録、false の場合は既存UUIDの参照を行う。
+ */
+export type RegistrationIdentityRequest = {
+  register: boolean;
+  nickName: string;
+  birthDate: string;
+};
+
+/**
+ * ユーザーUUID登録・参照API: バックエンドが返すUUID。
+ */
+export type RegistrationIdentityResponse = ApiSuccessResponse<{
+  userUuid: ApiId;
+}>;
 
 /**
  * ユーザー登録API: 初回プロフィール登録を完了させる時に送信するデータ。

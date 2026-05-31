@@ -1,8 +1,11 @@
 import type {
+  ApiErrorResponse,
   CompleteRegistrationRequest,
   FeedbackRequest,
   FeedbackResponse,
   LevelingResult,
+  RegistrationIdentityRequest,
+  RegistrationIdentityResponse,
   SaveLegalConsentRequest,
   SaveValueAnswersRequest,
 } from "@/types/api";
@@ -18,6 +21,48 @@ function waitForMockNetwork() {
   return new Promise((resolve) => {
     window.setTimeout(resolve, 180);
   });
+}
+
+function buildApiUrl(path: string) {
+  const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL ?? "";
+
+  return `${baseUrl}${path}`;
+}
+
+async function readApiError(response: Response) {
+  try {
+    const body = (await response.json()) as ApiErrorResponse;
+
+    if (body.error?.message) {
+      return body.error.message;
+    }
+  } catch {
+    return `API request failed: ${response.status}`;
+  }
+
+  return `API request failed: ${response.status}`;
+}
+
+/**
+ * ユーザーUUID登録・参照。
+ * Back.Ver.0.0.1 の POST /api/registration/status に合わせて送信する。
+ */
+export async function registerUserIdentity(
+  request: RegistrationIdentityRequest,
+): Promise<RegistrationIdentityResponse> {
+  const response = await fetch(buildApiUrl("/api/registration/status"), {
+    body: JSON.stringify(request),
+    headers: {
+      "Content-Type": "application/json",
+    },
+    method: "POST",
+  });
+
+  if (!response.ok) {
+    throw new Error(await readApiError(response));
+  }
+
+  return (await response.json()) as RegistrationIdentityResponse;
 }
 
 /**
