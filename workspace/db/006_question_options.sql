@@ -5,6 +5,7 @@ CREATE TABLE IF NOT EXISTS Question_Options (
     question_id VARCHAR(36) NOT NULL,
     option_text TEXT NOT NULL,
     display_order INT NOT NULL,
+    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     PRIMARY KEY (option_id),
     CONSTRAINT fk_question_options_item
         FOREIGN KEY (question_id)
@@ -26,4 +27,5 @@ INSERT INTO Question_Options (
 ON DUPLICATE KEY UPDATE
     question_id = VALUES(question_id),
     option_text = VALUES(option_text),
-    display_order = VALUES(display_order);
+    display_order = VALUES(display_order),
+    updated_at = CURRENT_TIMESTAMP;

@@ -5,6 +5,7 @@ CREATE TABLE IF NOT EXISTS Question_Answers (
     question_id VARCHAR(36) NOT NULL,
     question_answer JSON NOT NULL,
     answered_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     PRIMARY KEY (user_uuid, question_id),
     CONSTRAINT fk_question_answers_user
         FOREIGN KEY (user_uuid)

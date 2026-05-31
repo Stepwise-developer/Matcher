@@ -9,6 +9,7 @@ CREATE TABLE IF NOT EXISTS User_Profiles (
     weight VARCHAR(10) NOT NULL,
     area VARCHAR(100) NOT NULL,
     trainline VARCHAR(100) NOT NULL,
+    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     PRIMARY KEY (user_uuid),
     CONSTRAINT fk_user_profiles_user
         FOREIGN KEY (user_uuid)

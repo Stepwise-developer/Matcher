@@ -5,6 +5,7 @@ CREATE TABLE IF NOT EXISTS Leveling_Answers (
     leveling_id VARCHAR(36) NOT NULL,
     leveling_answer BOOLEAN NOT NULL,
     answered_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     PRIMARY KEY (user_uuid, leveling_id),
     CONSTRAINT fk_leveling_answers_user
         FOREIGN KEY (user_uuid)

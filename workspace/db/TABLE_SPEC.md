@@ -51,6 +51,7 @@
 | `weight` | `VARCHAR(10)` | NOT NULL | 体重 |
 | `area` | `VARCHAR(100)` | NOT NULL | エリア |
 | `trainline` | `VARCHAR(100)` | NOT NULL | 沿線 |
+| `updated_at` | `DATETIME` | NOT NULL, DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP | 更新日時 |
 
 ## Leveling_Items
 
@@ -71,6 +72,7 @@
 | `leveling_id` | `VARCHAR(36)` | PK, FK -> `Leveling_Items.leveling_id` | レベリング項目ID |
 | `leveling_answer` | `BOOLEAN` | NOT NULL | 達成結果 |
 | `answered_at` | `DATETIME` | NOT NULL, DEFAULT CURRENT_TIMESTAMP | 回答日時 |
+| `updated_at` | `DATETIME` | NOT NULL, DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP | 更新日時 |
 
 ## Question_Items
 
@@ -95,6 +97,7 @@
 | `question_id` | `VARCHAR(36)` | FK -> `Question_Items.question_id` | 質問ID |
 | `option_text` | `TEXT` | NOT NULL | 選択肢本文 |
 | `display_order` | `INT` | NOT NULL | 表示順 |
+| `updated_at` | `DATETIME` | NOT NULL, DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP | 更新日時 |
 
 初期データは `q_priority_action` に紐づく 4 件のみです。
 
@@ -106,6 +109,7 @@
 | `question_id` | `VARCHAR(36)` | PK, FK -> `Question_Items.question_id` | 質問ID |
 | `question_answer` | `JSON` | NOT NULL | 回答JSON |
 | `answered_at` | `DATETIME` | NOT NULL, DEFAULT CURRENT_TIMESTAMP | 回答日時 |
+| `updated_at` | `DATETIME` | NOT NULL, DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP | 更新日時 |
 
 ## Mermaid ER 図
 
@@ -134,6 +138,7 @@ erDiagram
         VARCHAR weight
         VARCHAR area
         VARCHAR train_line
+        DATETIME updated_at
     }
 
     Legal_Consents {
@@ -173,6 +178,7 @@ erDiagram
         VARCHAR question_id FK
         TEXT option_text
         INT display_order
+        DATETIME updated_at
     }
 
     Question_Answers {
@@ -180,6 +186,7 @@ erDiagram
         VARCHAR question_id PK
         JSON answer_json
         DATETIME answered_at
+        DATETIME updated_at
     }
 
     Feedback {
@@ -227,6 +234,7 @@ erDiagram
         VARCHAR weight
         VARCHAR area
         VARCHAR trainline
+        DATETIME updated_at
     }
 
     Leveling_Items {
@@ -241,6 +249,7 @@ erDiagram
         VARCHAR leveling_id PK
         BOOLEAN leveling_answer
         DATETIME answered_at
+        DATETIME updated_at
     }
 
     Question_Items {
@@ -259,6 +268,7 @@ erDiagram
         VARCHAR question_id FK
         TEXT option_text
         INT display_order
+        DATETIME updated_at
     }
 
     Question_Answers {
@@ -266,6 +276,7 @@ erDiagram
         VARCHAR question_id PK
         JSON question_answer
         DATETIME answered_at
+        DATETIME updated_at
     }
 
     Feedback {
