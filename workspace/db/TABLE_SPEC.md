@@ -30,10 +30,14 @@
 | `user_uuid` | `VARCHAR(36)` | PK | ユーザーID |
 | `user_level` | `INT` | NOT NULL, DEFAULT 1 | ユーザーレベル |
 | `nick_name` | `VARCHAR(100)` | NULL | ニックネーム |
+| `birth_date` | `DATE` | NULL | 生年月日 |
 | `values_completed` | `BOOLEAN` | NOT NULL, DEFAULT FALSE | 価値観回答完了フラグ |
 | `registration_completed` | `DATETIME` | NULL | 登録完了日時 |
 | `legal_consents` | `JSON` | NULL | 規約同意内容 |
 | `legal_consents_agreed_at` | `DATETIME` | NULL | 規約同意日時 |
+
+`nick_name` と `birth_date` の組み合わせは、ユーザーUUIDの参照・登録APIで使います。  
+同じ組み合わせが重複しないように、`uq_users_nick_name_birth_date` を設定しています。
 
 ## User_Profiles
 
@@ -207,6 +211,7 @@ erDiagram
         VARCHAR user_uuid PK
         INT user_level
         VARCHAR nick_name
+        DATE birth_date
         BOOLEAN values_completed
         DATETIME registration_completed
         JSON legal_consents
