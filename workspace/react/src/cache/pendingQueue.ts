@@ -7,7 +7,11 @@ import type { LevelingResult } from "@/types/api";
 const levelingQueueKey = "omatcha-pending-leveling-v1";
 
 function canUseSessionStorage() {
-  return typeof window !== "undefined" && Boolean(window.sessionStorage);
+  try {
+    return typeof window !== "undefined" && Boolean(window.sessionStorage);
+  } catch {
+    return false;
+  }
 }
 
 export function readPendingLevelingResults() {
@@ -15,7 +19,13 @@ export function readPendingLevelingResults() {
     return [];
   }
 
-  const saved = window.sessionStorage.getItem(levelingQueueKey);
+  let saved: string | null;
+
+  try {
+    saved = window.sessionStorage.getItem(levelingQueueKey);
+  } catch {
+    return [];
+  }
 
   if (!saved) {
     return [];
@@ -24,7 +34,12 @@ export function readPendingLevelingResults() {
   try {
     return JSON.parse(saved) as LevelingResult[];
   } catch {
-    window.sessionStorage.removeItem(levelingQueueKey);
+    try {
+      window.sessionStorage.removeItem(levelingQueueKey);
+    } catch {
+      return [];
+    }
+
     return [];
   }
 }
@@ -34,7 +49,11 @@ export function writePendingLevelingResults(results: LevelingResult[]) {
     return;
   }
 
-  window.sessionStorage.setItem(levelingQueueKey, JSON.stringify(results));
+  try {
+    window.sessionStorage.setItem(levelingQueueKey, JSON.stringify(results));
+  } catch {
+    return;
+  }
 }
 
 /**
@@ -63,7 +82,12 @@ export function clearPendingLevelingResults(itemIds?: string[]) {
   }
 
   if (!itemIds) {
-    window.sessionStorage.removeItem(levelingQueueKey);
+    try {
+      window.sessionStorage.removeItem(levelingQueueKey);
+    } catch {
+      return;
+    }
+
     return;
   }
 
@@ -76,5 +100,9 @@ export function clearPendingLevelingResults(itemIds?: string[]) {
     return;
   }
 
-  window.sessionStorage.removeItem(levelingQueueKey);
+  try {
+    window.sessionStorage.removeItem(levelingQueueKey);
+  } catch {
+    return;
+  }
 }

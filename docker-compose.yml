@@ -23,6 +23,7 @@ services:
     environment:
       http_proxy: ${http_proxy:-}
       https_proxy: ${https_proxy:-}
+      NEXT_ALLOWED_DEV_ORIGINS: ${NEXT_ALLOWED_DEV_ORIGINS:-}
     volumes:
       - ./workspace/react:/workspace
       - react_node_modules:/workspace/node_modules

@@ -35,7 +35,11 @@ const draftKeys = {
 } as const;
 
 function canUseSessionStorage() {
-  return typeof window !== "undefined" && Boolean(window.sessionStorage);
+  try {
+    return typeof window !== "undefined" && Boolean(window.sessionStorage);
+  } catch {
+    return false;
+  }
 }
 
 function readJsonDraft<TValue>(key: string): TValue | null {
@@ -43,7 +47,13 @@ function readJsonDraft<TValue>(key: string): TValue | null {
     return null;
   }
 
-  const saved = window.sessionStorage.getItem(key);
+  let saved: string | null;
+
+  try {
+    saved = window.sessionStorage.getItem(key);
+  } catch {
+    return null;
+  }
 
   if (!saved) {
     return null;
@@ -52,7 +62,12 @@ function readJsonDraft<TValue>(key: string): TValue | null {
   try {
     return JSON.parse(saved) as TValue;
   } catch {
-    window.sessionStorage.removeItem(key);
+    try {
+      window.sessionStorage.removeItem(key);
+    } catch {
+      return null;
+    }
+
     return null;
   }
 }
@@ -62,7 +77,11 @@ function writeJsonDraft<TValue>(key: string, value: TValue) {
     return;
   }
 
-  window.sessionStorage.setItem(key, JSON.stringify(value));
+  try {
+    window.sessionStorage.setItem(key, JSON.stringify(value));
+  } catch {
+    return;
+  }
 }
 
 export function readValueAnswersDraft() {
@@ -86,7 +105,11 @@ export function clearValueAnswersDraft() {
     return;
   }
 
-  window.sessionStorage.removeItem(draftKeys.values);
+  try {
+    window.sessionStorage.removeItem(draftKeys.values);
+  } catch {
+    return;
+  }
 }
 
 export function readFeedbackDraft() {
@@ -110,7 +133,11 @@ export function clearFeedbackDraft() {
     return;
   }
 
-  window.sessionStorage.removeItem(draftKeys.feedback);
+  try {
+    window.sessionStorage.removeItem(draftKeys.feedback);
+  } catch {
+    return;
+  }
 }
 
 export function clearAllInputDrafts() {
