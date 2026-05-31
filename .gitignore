@@ -27,3 +27,8 @@ __pycache__/
 
 # Codex
 docker-compose.codex.yml
+
+# database
+**/server/db/db_data/
+service/db/.gitkeep
+service/db/db_data/
