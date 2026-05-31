@@ -356,8 +356,9 @@ async fn save_registration_profile(
             height,
             weight,
             area,
-            trainline
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            trainline,
+            updated_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW())
         ON DUPLICATE KEY UPDATE
             name = VALUES(name),
             age = VALUES(age),
@@ -365,7 +366,8 @@ async fn save_registration_profile(
             height = VALUES(height),
             weight = VALUES(weight),
             area = VALUES(area),
-            trainline = VALUES(trainline)
+            trainline = VALUES(trainline),
+            updated_at = NOW()
         ",
     )
     .bind(&user_uuid)
@@ -423,11 +425,13 @@ async fn save_leveling_result(
             user_uuid,
             leveling_id,
             leveling_answer,
-            answered_at
-        ) VALUES (?, ?, ?, ?)
+            answered_at,
+            updated_at
+        ) VALUES (?, ?, ?, ?, NOW())
         ON DUPLICATE KEY UPDATE
             leveling_answer = VALUES(leveling_answer),
-            answered_at = VALUES(answered_at)
+            answered_at = VALUES(answered_at),
+            updated_at = NOW()
         ",
     )
     .bind(&user_uuid)
@@ -477,11 +481,13 @@ async fn save_value_answers(
                 user_uuid,
                 question_id,
                 question_answer,
-                answered_at
-            ) VALUES (?, ?, ?, NOW())
+                answered_at,
+                updated_at
+            ) VALUES (?, ?, ?, NOW(), NOW())
             ON DUPLICATE KEY UPDATE
                 question_answer = VALUES(question_answer),
-                answered_at = VALUES(answered_at)
+                answered_at = VALUES(answered_at),
+                updated_at = NOW()
             ",
         )
         .bind(&user_uuid)
