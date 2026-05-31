@@ -2,7 +2,7 @@ use axum::extract::State;
 use axum::http::{HeaderMap, StatusCode};
 use axum::response::{IntoResponse, Response};
 use axum::{Json, Router, routing::get, routing::post};
-use chrono::DateTime;
+use chrono::{DateTime, NaiveDate};
 use serde::{Deserialize, Serialize};
 use sqlx::mysql::MySqlPoolOptions;
 use sqlx::{MySqlPool, Row};
@@ -69,6 +69,21 @@ struct RegistrationData {
 #[derive(Serialize)]
 struct RegistrationStatusData {
     registration: Option<RegistrationData>,
+}
+
+#[derive(Deserialize)]
+struct RegistrationStatusRequest {
+    register: bool,
+    #[serde(rename = "nickName")]
+    nick_name: String,
+    #[serde(rename = "birthDate")]
+    birth_date: String,
+}
+
+#[derive(Serialize)]
+struct UserUuidData {
+    #[serde(rename = "userUuid")]
+    user_uuid: String,
 }
 
 #[derive(Deserialize)]
@@ -178,7 +193,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let state = AppState { pool };
 
     let app = Router::new()
-        .route("/api/registration/status", get(get_registration_status))
+        .route(
+            "/api/registration/status",
+            get(get_registration_status).post(resolve_registration_user_uuid),
+        )
         .route("/api/legal-consents", post(save_legal_consent))
         .route("/api/registration/profile", post(save_registration_profile))
         .route("/api/leveling/items", get(get_leveling_items))
@@ -205,6 +223,73 @@ async fn get_registration_status(
     let user_uuid = user_uuid_from_headers(&headers);
     let registration = load_registration(&state.pool, &user_uuid).await?;
     let data = RegistrationStatusData { registration };
+
+    Ok(Json(ApiResponse { data }))
+}
+
+async fn resolve_registration_user_uuid(
+    State(state): State<AppState>,
+    Json(payload): Json<RegistrationStatusRequest>,
+) -> Result<Json<ApiResponse<UserUuidData>>, ApiError> {
+    let nick_name = payload.nick_name.trim().to_string();
+
+    if nick_name.is_empty() {
+        return Err(validation_error("nickName", "ニックネームは必須です。"));
+    }
+
+    let birth_date = parse_birth_date(&payload.birth_date)?;
+
+    if payload.register {
+        let existing_user_uuid =
+            find_user_uuid_by_nick_name_and_birth_date(&state.pool, &nick_name, &birth_date)
+                .await?;
+
+        match existing_user_uuid {
+            Some(_) => {
+                return Err(conflict_error(
+                    "user",
+                    "同じニックネームと生年月日のユーザーが既に登録されています。",
+                ));
+            }
+            None => {}
+        }
+
+        let user_uuid = Uuid::new_v4().to_string();
+
+        sqlx::query(
+            "
+            INSERT INTO Users (
+                user_uuid,
+                nick_name,
+                birth_date
+            ) VALUES (?, ?, ?)
+            ",
+        )
+        .bind(&user_uuid)
+        .bind(&nick_name)
+        .bind(&birth_date)
+        .execute(&state.pool)
+        .await?;
+
+        let data = UserUuidData { user_uuid };
+
+        return Ok(Json(ApiResponse { data }));
+    }
+
+    let user_uuid =
+        find_user_uuid_by_nick_name_and_birth_date(&state.pool, &nick_name, &birth_date).await?;
+
+    let user_uuid = match user_uuid {
+        Some(value) => value,
+        None => {
+            return Err(not_found_error(
+                "user",
+                "指定されたニックネームと生年月日のユーザーが見つかりません。",
+            ));
+        }
+    };
+
+    let data = UserUuidData { user_uuid };
 
     Ok(Json(ApiResponse { data }))
 }
@@ -521,6 +606,37 @@ async fn ensure_user(pool: &MySqlPool, user_uuid: &str) -> Result<(), ApiError> 
     .await?;
 
     Ok(())
+}
+
+async fn find_user_uuid_by_nick_name_and_birth_date(
+    pool: &MySqlPool,
+    nick_name: &str,
+    birth_date: &str,
+) -> Result<Option<String>, ApiError> {
+    let row = sqlx::query(
+        "
+        SELECT user_uuid
+        FROM Users
+        WHERE nick_name = ?
+          AND birth_date = ?
+        LIMIT 1
+        ",
+    )
+    .bind(nick_name)
+    .bind(birth_date)
+    .fetch_optional(pool)
+    .await?;
+
+    let row = match row {
+        Some(row) => row,
+        None => {
+            return Ok(None);
+        }
+    };
+
+    let user_uuid: String = row.try_get("user_uuid")?;
+
+    Ok(Some(user_uuid))
 }
 
 async fn load_registration(
@@ -864,6 +980,19 @@ fn iso_to_mysql_datetime(value: &str) -> String {
     }
 }
 
+fn parse_birth_date(value: &str) -> Result<String, ApiError> {
+    let date_text = value.trim();
+    let parse_result = NaiveDate::parse_from_str(date_text, "%Y-%m-%d");
+
+    match parse_result {
+        Ok(date) => Ok(date.format("%Y-%m-%d").to_string()),
+        Err(_) => Err(validation_error(
+            "birthDate",
+            "生年月日は YYYY-MM-DD 形式で送信してください。",
+        )),
+    }
+}
+
 fn validation_error(field_name: &str, message: &str) -> ApiError {
     let mut fields = HashMap::new();
 
@@ -873,6 +1002,19 @@ fn validation_error(field_name: &str, message: &str) -> ApiError {
         status: StatusCode::BAD_REQUEST,
         code: "validation_error".to_string(),
         message: "入力内容に誤りがあります。".to_string(),
+        fields,
+    }
+}
+
+fn conflict_error(field_name: &str, message: &str) -> ApiError {
+    let mut fields = HashMap::new();
+
+    fields.insert(field_name.to_string(), message.to_string());
+
+    ApiError {
+        status: StatusCode::CONFLICT,
+        code: "conflict".to_string(),
+        message: message.to_string(),
         fields,
     }
 }
