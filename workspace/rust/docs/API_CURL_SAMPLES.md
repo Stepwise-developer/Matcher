@@ -4,7 +4,7 @@ Rustサーバーで提供するエンドポイントAPIは以下の通り
 
 | エンドポイント | 役割 |
 | --- | --- |
-| `GET /api/registration/status` | 登録状態を取得する |
+| `POST /api/registration/status` | ニックネームと生年月日でユーザーUUIDを登録・参照する |
 | `POST /api/legal-consents` | 利用規約・プライバシーポリシーの同意を保存する |
 | `POST /api/registration/profile` | プロフィールを登録・更新する |
 | `GET /api/leveling/items` | レベリング項目を取得する |
@@ -34,16 +34,40 @@ Rustサーバーで提供するエンドポイントAPIは以下の通り
 | --- | --- |
 | `400 Bad Request` | 送信内容に誤りがある |
 | `404 Not Found` | 必要なデータが未登録 |
+| `409 Conflict` | 登録しようとした内容が既に存在する |
 | `500 Internal Server Error` | DB処理などサーバー側で失敗 |
 
 
-## 登録状態取得
+## ユーザーUUID登録・参照
 
-送信JSON: なし
+送信JSON(サンプル):
+
+```json
+{
+  "register": false,
+  "nickName": "matcha_taro",
+  "birthDate": "2000-01-01"
+}
+```
+
+`register` の意味:
+
+| 値 | 動作 |
+| --- | --- |
+| `false` | `nickName` と `birthDate` でDBを参照し、既存の `userUuid` を返す |
+| `true` | 新しい `userUuid` を生成し、`nickName` と `birthDate` と一緒に登録する |
 
 ```sh
-curl -sS \
-  -H "X-User-UUID: ${USER_UUID}" \
+# 参照
+curl -sS -X POST \
+  -H "Content-Type: application/json" \
+  -d '{"register":false,"nickName":"matcha_taro","birthDate":"2000-01-01"}' \
+  "${BASE_URL}/api/registration/status"
+
+# 登録
+curl -sS -X POST \
+  -H "Content-Type: application/json" \
+  -d '{"register":true,"nickName":"matcha_taro","birthDate":"2000-01-01"}' \
   "${BASE_URL}/api/registration/status"
 ```
 
@@ -51,12 +75,15 @@ curl -sS \
 
 | ステータス | 結果 |
 | --- | --- |
-| `200 OK` | 登録状態を返す。未登録なら `registration` は `null` |
+| `200 OK` | 参照または登録したユーザーUUIDを返す |
+| `400 Bad Request` | `nickName` が空、または `birthDate` の形式が不正 |
+| `404 Not Found` | `register: false` で該当ユーザーが存在しない |
+| `409 Conflict` | `register: true` で同じ `nickName` と `birthDate` が既に存在する |
 
 ```json
 {
   "data": {
-    "registration": null
+    "userUuid": "2c15dc64-26f7-4210-a358-6fbfd5e2f927"
   }
 }
 ```
