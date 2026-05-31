@@ -73,6 +73,30 @@ const emptyIdentity: RegistrationIdentity = {
   birthDate: "",
 };
 
+function readStoredRegistration() {
+  try {
+    return window.localStorage.getItem(storageKey);
+  } catch {
+    return null;
+  }
+}
+
+function writeStoredRegistration(registration: RegistrationData) {
+  try {
+    window.localStorage.setItem(storageKey, JSON.stringify(registration));
+  } catch {
+    return;
+  }
+}
+
+function clearStoredRegistration() {
+  try {
+    window.localStorage.removeItem(storageKey);
+  } catch {
+    return;
+  }
+}
+
 /**
  * フロントが表示している法務文書の版数。
  * バックエンド側では、この版数とユーザーの同意状態を保存する想定。
@@ -321,31 +345,36 @@ export default function Home() {
     useState<SubmitStatus>("idle");
 
   useEffect(() => {
-    const saved = window.localStorage.getItem(storageKey);
-    const valueDraft = readValueAnswersDraft();
+    try {
+      const saved = readStoredRegistration();
+      const valueDraft = readValueAnswersDraft();
 
-    if (saved) {
-      try {
-        const parsed = JSON.parse(saved) as RegistrationData;
-        const savedValues = parsed.values ?? emptyValues;
+      if (saved) {
+        try {
+          const parsed = JSON.parse(saved) as RegistrationData;
+          const savedValues = parsed.values ?? emptyValues;
 
-        setRegistration({ ...parsed, values: savedValues });
-        setProfile(parsed.profile ?? emptyProfile);
-        setUserUuid(parsed.userUuid ?? "");
-        setValues(parsed.valuesCompleted ? savedValues : valueDraft ?? savedValues);
-      } catch {
-        window.localStorage.removeItem(storageKey);
+          setRegistration({ ...parsed, values: savedValues });
+          setProfile(parsed.profile ?? emptyProfile);
+          setUserUuid(parsed.userUuid ?? "");
+          setValues(
+            parsed.valuesCompleted ? savedValues : valueDraft ?? savedValues,
+          );
+        } catch {
+          clearStoredRegistration();
 
-        if (valueDraft) {
-          setValues(valueDraft);
+          if (valueDraft) {
+            setValues(valueDraft);
+          }
         }
+      } else if (valueDraft) {
+        setValues(valueDraft);
       }
-    } else if (valueDraft) {
-      setValues(valueDraft);
-    }
 
-    setPendingLevelingCount(readPendingLevelingResults().length);
-    setMounted(true);
+      setPendingLevelingCount(readPendingLevelingResults().length);
+    } finally {
+      setMounted(true);
+    }
   }, []);
 
   const profileComplete = useMemo(() => {
@@ -449,7 +478,7 @@ export default function Home() {
       completedAt: new Date().toISOString(),
     };
 
-    window.localStorage.setItem(storageKey, JSON.stringify(nextRegistration));
+    writeStoredRegistration(nextRegistration);
     setRegistration(nextRegistration);
     setValues(emptyValues);
     setProfileSubmitStatus("saved");
@@ -478,7 +507,7 @@ export default function Home() {
       valuesCompleted: true,
     };
 
-    window.localStorage.setItem(storageKey, JSON.stringify(nextRegistration));
+    writeStoredRegistration(nextRegistration);
     setRegistration(nextRegistration);
     setValues(nextValues);
     clearValueAnswersDraft();
@@ -506,7 +535,7 @@ export default function Home() {
   }
 
   function updateRegistration(nextRegistration: RegistrationData) {
-    window.localStorage.setItem(storageKey, JSON.stringify(nextRegistration));
+    writeStoredRegistration(nextRegistration);
     setRegistration(nextRegistration);
   }
 
@@ -558,7 +587,7 @@ export default function Home() {
   }
 
   function resetRegistration() {
-    window.localStorage.removeItem(storageKey);
+    clearStoredRegistration();
     clearAllInputDrafts();
     clearPendingLevelingResults();
     setRegistration(null);
