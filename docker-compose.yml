@@ -4,6 +4,9 @@ services:
     build:
       context: .
       dockerfile: docker/dockerfile.nginx
+      args:
+        http_proxy: ${http_proxy:-}
+        https_proxy: ${https_proxy:-}
     ports:
       - "443:443"
     volumes:
@@ -17,6 +20,9 @@ services:
     build:
       context: .
       dockerfile: docker/dockerfile.react
+    environment:
+      http_proxy: ${http_proxy:-}
+      https_proxy: ${https_proxy:-}
     volumes:
       - ./workspace/react:/workspace
     working_dir: /workspace
